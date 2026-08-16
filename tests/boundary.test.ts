@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, test } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 import { resolveLocation, lookupCity } from '../src/geo/resolver';
 
@@ -132,5 +132,122 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
     expect(() => {
       resolveLocation({ place: 'NonExistentCity999' });
     }).toThrow('未能识别出生地');
+  });
+
+  // 10. 南半球时区与夏令时
+  it('Should handle Southern Hemisphere timezone and its DST (Australia/Sydney in January)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Sydney',
+      longitude: 151.2093,
+      timezone: 'Australia/Sydney',
+      solarDate: { year: 2024, month: 1, day: 15 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male'
+    });
+    expect(result.诊断.钟面).toContain('Australia/Sydney');
+    expect(result.诊断.时区偏移).toContain('夏令时生效');
+  });
+
+  it('Should handle Southern Hemisphere timezone in winter (Australia/Sydney in July)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Sydney',
+      longitude: 151.2093,
+      timezone: 'Australia/Sydney',
+      solarDate: { year: 2024, month: 7, day: 15 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male'
+    });
+    expect(result.诊断.时区偏移).not.toContain('夏令时生效');
+  });
+
+  it('Should handle extreme longitude like Fiji (Pacific/Fiji)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Suva',
+      longitude: 178.4415,
+      timezone: 'Pacific/Fiji',
+      solarDate: { year: 2024, month: 2, day: 10 },
+      clockTime: { hour: 14, minute: 30 },
+      gender: 'female'
+    });
+    expect(result.诊断.经度修正分钟).toBeLessThan(0);
+    expect(result.诊断.时区偏移).toBeDefined();
+  });
+
+  it('Should handle sect=1 (default 00:00 boundary) vs sect=2 (23:00 boundary) for late Zi hour', () => {
+    const date = { year: 2024, month: 5, day: 10 };
+    const time = { hour: 23, minute: 30 };
+    
+    const resultSect1 = calculateDualAxisBazi({
+      place: 'Beijing',
+      longitude: 116.4,
+      timezone: 'Asia/Shanghai',
+      solarDate: date,
+      clockTime: time,
+      gender: 'male',
+      sect: 1
+    });
+
+    const resultSect2 = calculateDualAxisBazi({
+      place: 'Beijing',
+      longitude: 116.4,
+      timezone: 'Asia/Shanghai',
+      solarDate: date,
+      clockTime: time,
+      gender: 'male',
+      sect: 2
+    });
+
+    expect(resultSect1.pillars.day.ganZhi).not.toBe(resultSect2.pillars.day.ganZhi);
+    expect(resultSect2.诊断.口径.sect).toBe(2);
+    expect(resultSect1.诊断.口径.sect).toBe(1);
+  });
+
+  // 11. 极值地理与时间线测试
+  test('Extreme West: Alaska (Adak, UTC-10)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Adak, Alaska',
+      longitude: -176.65,
+      timezone: 'America/Adak',
+      solarDate: { year: 2000, month: 6, day: 21 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male'
+    });
+    expect(result.诊断.钟面).toContain('America/Adak');
+  });
+
+  test('Extreme East: New Zealand (Chatham Islands, UTC+12:45 / +13:45 DST)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Chatham Islands',
+      longitude: -176.5,
+      timezone: 'Pacific/Chatham',
+      solarDate: { year: 2024, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'female'
+    });
+    expect(result.诊断.钟面).toContain('Pacific/Chatham');
+  });
+
+  test('Line Islands: Kiribati (UTC+14, jumped date line in 1994)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Kiritimati',
+      longitude: -157.36,
+      timezone: 'Pacific/Kiritimati',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male'
+    });
+    expect(result.诊断.钟面).toContain('Pacific/Kiritimati');
+  });
+
+  test('Fractional offset: Nepal (UTC+5:45)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Kathmandu',
+      longitude: 85.32,
+      timezone: 'Asia/Kathmandu',
+      solarDate: { year: 2024, month: 6, day: 15 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'female'
+    });
+    expect(result.诊断.钟面).toContain('Asia/Kathmandu');
   });
 });

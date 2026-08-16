@@ -8,8 +8,8 @@
         "@modelcontextprotocol/sdk": "^1.10.0",
         "@openfate/bazi-engine": "^1.1.2",
         "@openfate/true-solar-time": "^4.0.0",
+        "@photostructure/tz-lookup": "^11.6.1",
         "city-timezones": "^1.3.4",
-        "tz-lookup": "^6.1.25",
         "zod": "^3.24.2",
       },
       "devDependencies": {
@@ -27,6 +27,8 @@
     "@openfate/bazi-engine": ["@openfate/bazi-engine@1.1.2", "", { "dependencies": { "@openfate/true-solar-time": "^4.0.0", "lunar-javascript": "^1.7.0" } }, "sha512-Gpxdm7H8l+WHPFHTZhVuLjtuWshrJUFnY413KZJ8NtiryFV17DtXz/Z8YHRp1YhEIFcPvPtxr5B/jDULk25lfA=="],
 
     "@openfate/true-solar-time": ["@openfate/true-solar-time@4.0.2", "", {}, "sha512-kPcQBPay0sdNGnj2XyoUlg1Cyq6lcVOaTTqlC+lh1Bvg6RODwG4ZD3rOk0C5O/qhnErWXoKHRMb2Kap/YfhAgg=="],
+
+    "@photostructure/tz-lookup": ["@photostructure/tz-lookup@11.6.1", "", {}, "sha512-azPdhOkwEyNFed8hSR7/U5Xe9eMO3YfbGYUnW3R9wlseimxSw6IkFaYAInDTb1KlbuwTOMzpa5oPcpAOXUM29A=="],
 
     "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
@@ -205,8 +207,6 @@
     "type-is": ["type-is@2.1.0", "", { "dependencies": { "content-type": "^2.0.0", "media-typer": "^1.1.0", "mime-types": "^3.0.0" } }, "sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
-    "tz-lookup": ["tz-lookup@6.1.25", "", {}, "sha512-fFewT9o1uDzsW1QnUU1ValqaihFnwiUiiHr1S79/fxOzKXYYvX+EHeRnpvQJ9B3Qg67wPXT6QF2Esc4pFOrvLg=="],
 
     "undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 

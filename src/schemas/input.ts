@@ -26,7 +26,7 @@ export const ClockTimeSchema = z.object({
 
 export const BaziInputSchema = z.object({
   // 出生地
-  place: z.string().optional().describe('出生城市名称，支持中英文，如 "广州"、"Tacoma, WA"、"乌鲁木齐"、"New York"'),
+  place: z.string().optional().describe('Birth city name in English, e.g. "Beijing", "New York", "Tacoma, WA"'),
   longitude: z.number().min(-180).max(180).optional().describe('出生地经度（东经为正，西经为负），如 116.4074 或 -122.4443'),
   timezone: z.string().optional().describe('IANA 时区名称，如 "Asia/Shanghai"、"America/Los_Angeles"'),
 
@@ -59,4 +59,14 @@ export const BaziInputSchema = z.object({
   { message: '必须提供 place，或同时提供 longitude 与 timezone。' }
 );
 
-export type ValidatedBaziInput = z.infer<typeof BaziInputSchema>;
+export const LookupLocationSchema = z.object({
+  query: z.string().min(1, '搜索词不能为空').describe('City name in English, e.g. "Tokyo", "London", "San Francisco"'),
+});
+
+export type ShichenBranch = z.infer<typeof ShichenEnum>;
+export type SolarDateInput = z.input<typeof SolarDateSchema>;
+export type LunarDateInput = z.input<typeof LunarDateSchema>;
+export type ClockTimeInput = z.input<typeof ClockTimeSchema>;
+export type BaziInput = z.input<typeof BaziInputSchema>;
+export type ValidatedBaziInput = z.output<typeof BaziInputSchema>;
+export type LookupLocationInput = z.input<typeof LookupLocationSchema>;

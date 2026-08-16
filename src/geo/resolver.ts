@@ -1,25 +1,11 @@
+import tzlookup from '@photostructure/tz-lookup';
+import cityTimezones, { CityTimezoneEntry } from 'city-timezones';
 import { CityEntry } from '../types';
-// @ts-ignore
-import tzlookup from 'tz-lookup';
-// @ts-ignore
-import cityTimezones from 'city-timezones';
-
-interface CityTimezoneEntry {
-  city: string;
-  city_ascii: string;
-  lat: number;
-  lng: number;
-  pop: number;
-  country: string;
-  iso2: string;
-  iso3: string;
-  province: string;
-  state_ansi?: string;
-  timezone: string;
-}
 
 /**
- * Normalizes query string for fuzzy search.
+ * Normalizes query string for fuzzy search:
+ * - Decomposes diacritics via Unicode NFD (e.g. "São Paulo" -> "Sao Paulo", "Reykjavík" -> "Reykjavik")
+ * - Removes non-spacing marks, punctuation, quotes, and whitespace.
  */
 function normalizeQuery(q: string): string {
   return q
@@ -32,15 +18,14 @@ function normalizeQuery(q: string): string {
 
 /**
  * Converts a city-timezones entry to our CityEntry format,
- * using tz-lookup to correct potentially stale IANA timezone names.
+ * using @photostructure/tz-lookup to ensure authoritative IANA timezone resolution.
  */
 function toCityEntry(ct: CityTimezoneEntry): CityEntry {
   let timezone = ct.timezone;
   try {
-    // Use tz-lookup for authoritative IANA timezone from coordinates
     timezone = tzlookup(ct.lat, ct.lng);
   } catch {
-    // Fall back to city-timezones' own timezone
+    // Fall back to city-timezones's own timezone value
   }
 
   return {
@@ -55,7 +40,8 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
 
 /**
  * Searches the global city-timezones database (7,329 cities, 227 countries).
- * Supports English city names, with fuzzy matching on city and city_ascii fields.
+ * Supports English city names, with fuzzy matching on city and city_ascii fields,
+ * prioritized by city population descending.
  */
 export function lookupCity(query: string): CityEntry[] {
   if (!query || !query.trim()) return [];
@@ -72,15 +58,14 @@ export function lookupCity(query: string): CityEntry[] {
     const provinceNorm = normalizeQuery(city.province || '');
     const countryNorm = normalizeQuery(city.country || '');
 
-    // 1. Exact match on city name or ascii name
+    // 1. Exact match on city name or ASCII name
     if (nameNorm === norm || asciiNorm === norm) {
       exactMatches.push(city);
       continue;
     }
 
-    // 2. "City, Province/State" style query (e.g. "San Francisco, CA" or "Kunming, Yunnan")
+    // 2. "City, State/Province" style query (e.g. "San Francisco, CA" or "Tacoma, WA")
     if (norm.includes(asciiNorm) || norm.includes(nameNorm)) {
-      // Check if province/state also matches the remainder
       const remainder = norm.replace(asciiNorm, '').replace(nameNorm, '');
       if (
         remainder.length === 0 ||
@@ -93,7 +78,7 @@ export function lookupCity(query: string): CityEntry[] {
       }
     }
 
-    // 3. Partial match
+    // 3. Partial / prefix match
     if (
       nameNorm.includes(norm) ||
       asciiNorm.includes(norm) ||
@@ -103,10 +88,11 @@ export function lookupCity(query: string): CityEntry[] {
     }
   }
 
-  // Deduplicate by city name + country, preferring higher population
-  let rawResults = exactMatches.length > 0 ? exactMatches : partialMatches;
+  // Sort by population descending so major cities take precedence
+  const rawResults = exactMatches.length > 0 ? exactMatches : partialMatches;
   rawResults.sort((a, b) => (b.pop || 0) - (a.pop || 0));
 
+  // Deduplicate by city name and country
   const seen = new Set<string>();
   const results: CityEntry[] = [];
 
@@ -118,7 +104,7 @@ export function lookupCity(query: string): CityEntry[] {
     }
   }
 
-  return results.slice(0, 10); // Limit to 10 results
+  return results.slice(0, 10);
 }
 
 export interface ResolvedLocation {
@@ -132,10 +118,10 @@ export interface ResolvedLocation {
 /**
  * Resolves location according to BaziInput contract:
  * - If explicit longitude AND timezone are provided, use them directly.
- * - If place is provided, look up coordinates and IANA timezone from city-timezones.
- * - If only coordinates (longitude + latitude) are provided, use tz-lookup.
- * - If place resolves to multiple candidates, throw an error listing candidates.
- * - If place cannot be resolved, throw descriptive error.
+ * - If place is provided, look up coordinates and IANA timezone from global database.
+ * - If only coordinates (longitude + latitude) are provided, use @photostructure/tz-lookup.
+ * - If place resolves to multiple candidates, disambiguates or reports candidates.
+ * - If place cannot be resolved, throws descriptive error.
  */
 export function resolveLocation(input: {
   place?: string;
@@ -158,7 +144,6 @@ export function resolveLocation(input: {
     const candidates = lookupCity(input.place);
 
     if (candidates.length === 0) {
-      // If longitude was provided along with unknown place, but missing timezone
       if (input.longitude !== undefined && input.latitude !== undefined) {
         try {
           const tz = tzlookup(input.latitude, input.longitude);
@@ -169,7 +154,7 @@ export function resolveLocation(input: {
             placeName: input.place,
           };
         } catch {
-          // continue to throw
+          // fall through
         }
       }
 
@@ -179,7 +164,6 @@ export function resolveLocation(input: {
     }
 
     if (candidates.length > 1) {
-      // Check if top result is a strong exact match — if so, just use it
       const topName = normalizeQuery(candidates[0].name);
       const queryNorm = normalizeQuery(input.place);
       if (topName === queryNorm) {
@@ -200,7 +184,7 @@ export function resolveLocation(input: {
         )
         .join('\n');
       throw new Error(
-        `地名 "${input.place}" 匹配到多个候选城市，请更精确指定（如 "San Francisco, CA"）或指定 \`longitude\` 与 \`timezone\`:\n${listStr}`
+        `地名 "${input.place}" 匹配到多个候选城市，请更精确指定（如 "San Francisco, CA"）或显式指定 \`longitude\` 与 \`timezone\`:\n${listStr}`
       );
     }
 
@@ -223,7 +207,7 @@ export function resolveLocation(input: {
           latitude: input.latitude,
           timezone: input.timezone || tz,
         };
-      } catch (err) {
+      } catch {
         throw new Error(
           `根据经纬度 (${input.longitude}, ${input.latitude}) 推算时区失败，请显式提供 \`timezone\` (IANA 时区名)。`
         );

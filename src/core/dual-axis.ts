@@ -53,13 +53,16 @@ function formatPillar(
     isMain: h.isMain,
   }));
 
+  const mainHidden = hiddenStems.find(h => h.isMain);
+  const branchTenGod = mainHidden ? mainHidden.tenGod : (pillar as { branchTenGod?: string }).branchTenGod;
+
   return {
     stem: pillar.stem,
     branch: pillar.branch,
     ganZhi: pillar.ganZhi,
     element: pillar.element,
     stemTenGod,
-    branchTenGod: (pillar as any).branchTenGod,
+    branchTenGod,
     hiddenStems,
     naYin: pillar.naYin,
     xun: pillar.xun,

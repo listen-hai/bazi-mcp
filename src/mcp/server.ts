@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { BaziInputSchema } from '../schemas/input';
+import { BaziInputSchema, LookupLocationSchema } from '../schemas/input';
 import { calculateDualAxisBazi } from '../core/dual-axis';
 import { lookupCity } from '../geo/resolver';
 import { BaziInput } from '../types';
@@ -14,7 +14,7 @@ export function createBaziMcpServer(): Server {
   const server = new Server(
     {
       name: 'bazi-mcp',
-      version: '1.0.0',
+      version: '1.0.2',
     },
     {
       capabilities: {
@@ -27,13 +27,13 @@ export function createBaziMcpServer(): Server {
     {
       name: 'calculate_bazi',
       description:
-        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, you MUST translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 뉴욕 → "New York").',
+        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York").',
       inputSchema: {
         type: 'object',
         properties: {
           place: {
             type: 'string',
-            description: 'Birth city name in ENGLISH (e.g. "Beijing", "New York", "Lagos", "Tacoma", "Urumqi"). Translate from other languages before passing. Supports "City, State" format (e.g. "San Francisco, CA").',
+            description: 'Birth city name in ENGLISH (e.g. "Beijing", "New York", "Lagos", "Tacoma, WA"). Translate from other languages before passing.',
           },
           longitude: {
             type: 'number',
@@ -96,7 +96,7 @@ export function createBaziMcpServer(): Server {
           gender: {
             type: 'string',
             enum: ['male', 'female'],
-            description: 'Gender: "male" or "female"',
+            description: 'Gender: "male" (男/乾造) or "female" (女/坤造)',
           },
           sect: {
             type: 'integer',
@@ -124,7 +124,7 @@ export function createBaziMcpServer(): Server {
         properties: {
           query: {
             type: 'string',
-            description: 'City name in ENGLISH (e.g. "Beijing", "Tokyo", "Lagos", "São Paulo"). Supports "City, State" format for US cities (e.g. "Portland, OR").',
+            description: 'City name in ENGLISH (e.g. "Beijing", "Tokyo", "Lagos", "São Paulo", "Portland, OR").',
           },
         },
         required: ['query'],
@@ -155,8 +155,7 @@ export function createBaziMcpServer(): Server {
       }
 
       if (name === 'lookup_location') {
-        const typedArgs = args as Record<string, unknown> | undefined;
-        const query = typeof typedArgs?.query === 'string' ? typedArgs.query : '';
+        const { query } = LookupLocationSchema.parse(args);
         const cities = lookupCity(query);
 
         return {

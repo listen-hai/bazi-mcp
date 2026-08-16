@@ -6,7 +6,7 @@
 [![Tests](https://img.shields.io/badge/tests-69%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
-> Deterministic, high-precision Four Pillars of Destiny (八字排盘) Model Context Protocol (MCP) server powered by a physical dual-axis astronomical time engine.
+> Deterministic, high-precision Four Pillars of Destiny (八字排盘) Model Context Protocol (MCP) server powered by a physical dual-axis astronomical time engine and global geographic database (7,329 cities across 227 countries).
 
 [中文文档 (Chinese)](README_zh.md) | [English](README.md)
 
@@ -108,7 +108,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `place` | string | Optional | City name in Chinese or English (e.g. `"昆明"`, `"Tacoma, WA"`, `"London"`) |
+| `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"London"`, `"Lagos"`). AI agents automatically translate any user language. |
 | `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`) |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
 | `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` |
@@ -128,11 +128,11 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 ---
 
 ### 2. `lookup_location`
-Resolves city names to coordinates, administrative regions, and official IANA timezone identifiers.
+Resolves city names to coordinates, administrative regions, and official IANA timezone identifiers across 7,329 global cities in 227 countries.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `query` | string | **Required** | City query string (e.g. `"昆明"`, `"Seattle"`, `"Tokyo"`) |
+| `query` | string | **Required** | City query string in English (e.g. `"Tokyo"`, `"Seattle"`, `"Paris"`, `"Kunming"`) |
 
 ---
 

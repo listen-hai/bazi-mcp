@@ -1,51 +1,12 @@
-export type ShichenBranch = '子' | '丑' | '寅' | '卯' | '辰' | '巳' | '午' | '未' | '申' | '酉' | '戌' | '亥';
-
-export interface SolarDateInput {
-  year: number;
-  month: number;
-  day: number;
-}
-
-export interface LunarDateInput {
-  year: number;
-  month: number;
-  day: number;
-  isLeapMonth?: boolean;
-}
-
-export interface ClockTimeInput {
-  hour: number;
-  minute: number;
-  second?: number;
-}
-
-export interface BaziInput {
-  // Place of birth
-  place?: string;
-  longitude?: number;
-  timezone?: string;
-
-  // Date
-  solarDate?: SolarDateInput;
-  lunarDate?: LunarDateInput;
-  lunarDateFrame?: 'local' | 'beijing';
-
-  // Time
-  clockTime?: ClockTimeInput;
-  shichen?: ShichenBranch;
-  timeUnknown?: boolean;
-
-  // DST disambiguation (0 = first occurrence / DST, 1 = second occurrence / Standard)
-  dstFold?: 0 | 1;
-
-  // Gender
-  gender: 'male' | 'female';
-
-  // School switches
-  sect?: 1 | 2; // 1 = early/late zi hour (default 1, 00:00 midnight rollover), 2 = 23:00 rollover
-  trueSolar?: boolean; // default true
-  childLimitProvider?: 'default' | 'china95' | 'season' | 'lunarSect1';
-}
+export type {
+  ShichenBranch,
+  SolarDateInput,
+  LunarDateInput,
+  ClockTimeInput,
+  BaziInput,
+  ValidatedBaziInput,
+  LookupLocationInput,
+} from './schemas/input';
 
 export interface WallDateTime {
   year: number;
@@ -165,12 +126,9 @@ export interface BaziCalculationResult {
 
 export interface CityEntry {
   name: string;
-  chineseName?: string;
-  pinyin?: string;
   country: string;
   province?: string;
   longitude: number;
   latitude: number;
   timezone: string;
-  aliases?: string[];
 }
