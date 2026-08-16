@@ -1,16 +1,45 @@
 {
   "name": "bazi-mcp",
   "version": "1.0.0",
-  "description": "Deterministic, dual-axis Bazi chart calculation MCP Server",
-  "main": "src/index.ts",
+  "description": "Deterministic, dual-axis Bazi chart calculation MCP Server with True Solar Time and global IANA DST support",
+  "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "bazi-mcp": "./src/index.ts"
+    "bazi-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "README_zh.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "bun run src/index.ts",
     "test": "bun test",
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "bun run scripts/build.ts",
+    "prepublishOnly": "bun run build && bun test"
+  },
+  "keywords": [
+    "bazi",
+    "mcp",
+    "model-context-protocol",
+    "astronomy",
+    "true-solar-time",
+    "four-pillars",
+    "chinese-astrology",
+    "claude",
+    "cursor",
+    "bun"
+  ],
+  "author": "Wesley Liu",
+  "license": "MIT",
+  "homepage": "https://github.com/listen-hai/bazi-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/listen-hai/bazi-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/listen-hai/bazi-mcp/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.0",
