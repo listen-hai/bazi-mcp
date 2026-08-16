@@ -1,6 +1,6 @@
-# 八字排盘 MCP (`bazi-mcp`)
+# 八字排盘 MCP (`@lhk714/bazi-mcp`)
 
-[![npm version](https://img.shields.io/npm/v/bazi-mcp.svg)](https://www.npmjs.com/package/bazi-mcp)
+[![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-69%20passed%2C%200%20failed-brightgreen.svg)]()
@@ -14,7 +14,7 @@
 
 ## 🌟 项目简介
 
-`bazi-mcp` 是专为大语言模型（Claude、Cursor、Antigravity、ChatGPT、DeepSeek）打造的生产级、纯离线八字排盘 MCP 服务。已发布至 NPM 官方仓库，支持通过 `bunx` 或 `npx` 秒级拉取并免安装运行。
+`@lhk714/bazi-mcp` 是专为大语言模型（Claude、Cursor、Antigravity、ChatGPT、DeepSeek）打造的生产级、纯离线八字排盘 MCP 服务。已配置至 NPM 官方仓库，支持通过 `bunx` 或 `npx` 秒级拉取并免安装运行。
 
 ```
 出生钟表时间 + IANA 时区 (如 1990-06-15 20:00 America/Los_Angeles)
@@ -42,22 +42,22 @@
 
 ### 方式 1：使用 Bun 运行 (`bunx` - 启动速度最快)
 ```bash
-bunx bazi-mcp
+bunx @lhk714/bazi-mcp
 ```
 
 ### 方式 2：使用 Node.js 运行 (`npx`)
 ```bash
 # Node.js 18+ 环境
-npx -y bazi-mcp
+npx -y @lhk714/bazi-mcp
 ```
 
 ### 方式 3：全局安装到命令行
 ```bash
 # 使用 Bun 全局安装
-bun add -g bazi-mcp
+bun add -g @lhk714/bazi-mcp
 
 # 或使用 NPM 全局安装
-npm install -g bazi-mcp
+npm install -g @lhk714/bazi-mcp
 
 # 安装后在任意终端直接输入命令：
 bazi-mcp
@@ -67,7 +67,7 @@ bazi-mcp
 
 ## 🔌 MCP 客户端配置
 
-在各 MCP 客户端配置文件中添加 `bazi-mcp`：
+在各 MCP 客户端配置文件中添加 `@lhk714/bazi-mcp`：
 
 ### Claude Desktop 配置文件路径
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -79,7 +79,7 @@ bazi-mcp
   "mcpServers": {
     "bazi": {
       "command": "bunx",
-      "args": ["bazi-mcp"]
+      "args": ["@lhk714/bazi-mcp"]
     }
   }
 }
@@ -91,7 +91,7 @@ bazi-mcp
   "mcpServers": {
     "bazi": {
       "command": "npx",
-      "args": ["-y", "bazi-mcp"]
+      "args": ["-y", "@lhk714/bazi-mcp"]
     }
   }
 }
@@ -166,7 +166,7 @@ bazi-mcp
 
 项目已集成 GitHub Actions 自动化工作流：
 - **持续集成 (`ci.yml`)**：在每次 `push` 或 `pull_request` 时自动运行全量测试与打包构建。
-- **自动发布 NPM (`publish.yml`)**：当创建新 Release 或推送版本 Tag（如 `v1.0.0`）时，自动编译并发布到 NPM 官方仓库。
+- **自动发布 NPM (`publish.yml`)**：当创建新 Release 或推送版本 Tag（如 `v1.0.0`）时，自动编译并发布 `@lhk714/bazi-mcp` 到 NPM 官方仓库。
 
 ---
 

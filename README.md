@@ -1,6 +1,6 @@
-# Bazi MCP (`bazi-mcp`)
+# Bazi MCP (`@lhk714/bazi-mcp`)
 
-[![npm version](https://img.shields.io/npm/v/bazi-mcp.svg)](https://www.npmjs.com/package/bazi-mcp)
+[![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-69%20passed%2C%200%20failed-brightgreen.svg)]()
@@ -14,7 +14,7 @@
 
 ## 🌟 Overview
 
-`bazi-mcp` provides a production-grade, offline-first MCP server for Large Language Models (Claude, Cursor, Antigravity, ChatGPT, DeepSeek) to perform rigorous Chinese Four Pillars of Destiny (八字) calculations for anyone, anywhere on Earth, across any era.
+`@lhk714/bazi-mcp` provides a production-grade, offline-first MCP server for Large Language Models (Claude, Cursor, Antigravity, ChatGPT, DeepSeek) to perform rigorous Chinese Four Pillars of Destiny (八字) calculations for anyone, anywhere on Earth, across any era.
 
 It is published on the NPM registry and can be run instantly without manual installation or local compilation.
 
@@ -40,27 +40,25 @@ Birth Wall Clock Time + IANA Timezone (e.g. 1990-06-15 20:00 America/Los_Angeles
 
 ## 🚀 Quickstart: Run via NPM
 
-You can run `bazi-mcp` directly from NPM using **Bun** or **Node.js (NPX)** with zero local repository setup.
+You can run `@lhk714/bazi-mcp` directly from NPM using **Bun** or **Node.js (NPX)** with zero local repository setup.
 
 ### Option 1: Instant execution with Bun (`bunx`)
 ```bash
-# Direct run
-bunx bazi-mcp
+bunx @lhk714/bazi-mcp
 ```
 
 ### Option 2: Instant execution with Node.js (`npx`)
 ```bash
-# Direct run (Node 18+)
-npx -y bazi-mcp
+npx -y @lhk714/bazi-mcp
 ```
 
 ### Option 3: Global Installation
 ```bash
 # Install globally via Bun
-bun add -g bazi-mcp
+bun add -g @lhk714/bazi-mcp
 
 # Or install globally via NPM
-npm install -g bazi-mcp
+npm install -g @lhk714/bazi-mcp
 
 # Then run anywhere:
 bazi-mcp
@@ -70,7 +68,7 @@ bazi-mcp
 
 ## 🔌 MCP Client Configuration
 
-Add `bazi-mcp` to your MCP client configuration file (e.g., `claude_desktop_config.json`, Cursor Settings, or Antigravity):
+Add `@lhk714/bazi-mcp` to your MCP client configuration file (e.g., `claude_desktop_config.json`, Cursor Settings, or Antigravity):
 
 ### 1. Claude Desktop Configuration
 
@@ -83,7 +81,7 @@ Add `bazi-mcp` to your MCP client configuration file (e.g., `claude_desktop_conf
   "mcpServers": {
     "bazi": {
       "command": "bunx",
-      "args": ["bazi-mcp"]
+      "args": ["@lhk714/bazi-mcp"]
     }
   }
 }
@@ -95,7 +93,7 @@ Add `bazi-mcp` to your MCP client configuration file (e.g., `claude_desktop_conf
   "mcpServers": {
     "bazi": {
       "command": "npx",
-      "args": ["-y", "bazi-mcp"]
+      "args": ["-y", "@lhk714/bazi-mcp"]
     }
   }
 }
@@ -140,7 +138,7 @@ Resolves city names to coordinates, administrative regions, and official IANA ti
 
 ## 🧪 Verification & Benchmark Matrix
 
-`bazi-mcp` is verified against 69 rigorous test suites (100% passing):
+`@lhk714/bazi-mcp` is verified against 69 rigorous test suites (100% passing):
 
 1. **Astro-Databank Rodden Rating AA Hospital Birth Certificates**:
    - **Donald Trump**: `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`
@@ -168,7 +166,7 @@ Resolves city names to coordinates, administrative regions, and official IANA ti
 
 The repository is equipped with automated GitHub Actions:
 - **Continuous Integration (`ci.yml`)**: Runs tests and builds on every push/PR to `main`.
-- **Automated NPM Release (`publish.yml`)**: Automatically tests, builds, and publishes to NPM whenever a new release or tag (e.g. `v1.0.0`) is created.
+- **Automated NPM Release (`publish.yml`)**: Automatically tests, builds, and publishes `@lhk714/bazi-mcp` to NPM whenever a new release or tag (e.g. `v1.0.0`) is created.
 
 ---
 
