@@ -27,90 +27,90 @@ export function createBaziMcpServer(): Server {
     {
       name: 'calculate_bazi',
       description:
-        '精准八字排盘工具。采用双时间轴架构（UTC 瞬时定年月柱与大运起运，当地真太阳时定日时柱），对全球任意出生地、历史夏令时、新疆等特殊经度及农历闰月均给出严谨四柱与完整诊断块。',
+        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, you MUST translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 뉴욕 → "New York").',
       inputSchema: {
         type: 'object',
         properties: {
           place: {
             type: 'string',
-            description: '出生城市名称（中英文均可，如 "广州"、"北京"、"Tacoma, WA"、"乌鲁木齐"、"New York"）',
+            description: 'Birth city name in ENGLISH (e.g. "Beijing", "New York", "Lagos", "Tacoma", "Urumqi"). Translate from other languages before passing. Supports "City, State" format (e.g. "San Francisco, CA").',
           },
           longitude: {
             type: 'number',
-            description: '出生地经度（东经为正，西经为负，如 116.4074 或 -122.4443）',
+            description: 'Birth location longitude (positive = East, negative = West, e.g. 116.4074 or -122.4443)',
           },
           timezone: {
             type: 'string',
-            description: '出生地 IANA 时区名（如 "Asia/Shanghai"、"America/Los_Angeles"）',
+            description: 'Birth location IANA timezone (e.g. "Asia/Shanghai", "America/Los_Angeles")',
           },
           solarDate: {
             type: 'object',
-            description: '公历出生日期（与 lunarDate 二选一）',
+            description: 'Solar (Gregorian) birth date (mutually exclusive with lunarDate)',
             properties: {
-              year: { type: 'integer', description: '公历年份 (如 1990)' },
-              month: { type: 'integer', description: '公历月份 (1-12)' },
-              day: { type: 'integer', description: '公历日期 (1-31)' },
+              year: { type: 'integer', description: 'Year (e.g. 1990)' },
+              month: { type: 'integer', description: 'Month (1-12)' },
+              day: { type: 'integer', description: 'Day (1-31)' },
             },
             required: ['year', 'month', 'day'],
           },
           lunarDate: {
             type: 'object',
-            description: '农历出生日期（与 solarDate 二选一）',
+            description: 'Lunar (Chinese calendar) birth date (mutually exclusive with solarDate)',
             properties: {
-              year: { type: 'integer', description: '农历年份 (如 1990)' },
-              month: { type: 'integer', description: '农历月份 (1-12)' },
-              day: { type: 'integer', description: '农历日期 (1-30)' },
-              isLeapMonth: { type: 'boolean', description: '是否为闰月 (如闰四月传 true)' },
+              year: { type: 'integer', description: 'Lunar year (e.g. 1990)' },
+              month: { type: 'integer', description: 'Lunar month (1-12)' },
+              day: { type: 'integer', description: 'Lunar day (1-30)' },
+              isLeapMonth: { type: 'boolean', description: 'Whether this is a leap month' },
             },
             required: ['year', 'month', 'day'],
           },
           lunarDateFrame: {
             type: 'string',
             enum: ['local', 'beijing'],
-            description: '农历日期基准：local (默认，按出生地当地公历日对应的农历) 或 beijing (按中国公历日)',
+            description: 'Lunar date reference frame: "local" (default, based on local Gregorian date) or "beijing" (based on China Gregorian date)',
           },
           clockTime: {
             type: 'object',
-            description: '钟表出生时刻（与 shichen、timeUnknown 三选一）',
+            description: 'Clock time of birth (mutually exclusive with shichen and timeUnknown)',
             properties: {
-              hour: { type: 'integer', description: '小时 (0-23)' },
-              minute: { type: 'integer', description: '分钟 (0-59)' },
-              second: { type: 'integer', description: '秒数 (0-59)' },
+              hour: { type: 'integer', description: 'Hour (0-23)' },
+              minute: { type: 'integer', description: 'Minute (0-59)' },
+              second: { type: 'integer', description: 'Second (0-59)' },
             },
             required: ['hour', 'minute'],
           },
           shichen: {
             type: 'string',
             enum: ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
-            description: '传统时辰（仅知时辰不知具体分钟时使用）',
+            description: 'Traditional Chinese double-hour (use when exact minute is unknown)',
           },
           timeUnknown: {
             type: 'boolean',
-            description: '时辰未知（排三柱盘，时柱及相关神煞置 null）',
+            description: 'Set true when birth time is unknown (produces a 3-pillar chart, hour pillar = null)',
           },
           dstFold: {
             type: 'integer',
             enum: [0, 1],
-            description: '秋季夏令时折返重叠消歧：0 = 第一次出现 (夏令时)，1 = 第二次出现 (标准时)',
+            description: 'DST fall-back disambiguation: 0 = first occurrence (DST), 1 = second occurrence (Standard)',
           },
           gender: {
             type: 'string',
             enum: ['male', 'female'],
-            description: '性别：male (男/乾造) 或 female (女/坤造)',
+            description: 'Gender: "male" or "female"',
           },
           sect: {
             type: 'integer',
             enum: [1, 2],
-            description: '早晚子时口径：1 (默认，00:00 换日) 或 2 (23:00 换日)',
+            description: 'Early/late Zi hour convention: 1 (default, midnight rollover at 00:00) or 2 (rollover at 23:00)',
           },
           trueSolar: {
             type: 'boolean',
-            description: '是否开启真太阳时修正 (默认 true)',
+            description: 'Whether to apply True Solar Time correction (default: true)',
           },
           childLimitProvider: {
             type: 'string',
             enum: ['default', 'china95', 'season', 'lunarSect1'],
-            description: '起运计算口径',
+            description: 'Da Yun onset calculation method',
           },
         },
         required: ['gender'],
@@ -118,13 +118,13 @@ export function createBaziMcpServer(): Server {
     },
     {
       name: 'lookup_location',
-      description: '查询城市的地理经纬度与官方 IANA 时区（支持中英文模糊查询）。',
+      description: 'Look up a city\'s geographic coordinates (latitude, longitude) and official IANA timezone. IMPORTANT: Use ENGLISH city names only. If the user provides a name in another language, translate it to English first (e.g. 东京 → "Tokyo", 巴黎 → "Paris"). Covers 7,329 cities across 227 countries.',
       inputSchema: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
-            description: '城市名称（如 "广州"、"北京"、"Tacoma"、"Seattle"、"乌鲁木齐"）',
+            description: 'City name in ENGLISH (e.g. "Beijing", "Tokyo", "Lagos", "São Paulo"). Supports "City, State" format for US cities (e.g. "Portland, OR").',
           },
         },
         required: ['query'],

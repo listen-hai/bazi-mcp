@@ -57,7 +57,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   // 4. 农历真实闰月支持（2020 闰四月十五 -> 庚辰日）
   it('Should correctly calculate valid leap lunar month', () => {
     const res = calculateDualAxisBazi({
-      place: '北京',
+      place: 'Beijing',
       lunarDate: { year: 2020, month: 4, day: 15, isLeapMonth: true },
       clockTime: { hour: 12, minute: 0 },
       gender: 'male',
@@ -70,7 +70,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   it('Should reject invalid leap lunar month', () => {
     expect(() => {
       calculateDualAxisBazi({
-        place: '北京',
+        place: 'Beijing',
         lunarDate: { year: 2021, month: 4, day: 15, isLeapMonth: true },
         clockTime: { hour: 12, minute: 0 },
         gender: 'male',
@@ -81,7 +81,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   // 6. 三柱盘（timeUnknown: true）
   it('Should output three-pillar chart when time is unknown', () => {
     const res = calculateDualAxisBazi({
-      place: '广州',
+      place: 'Guangzhou',
       solarDate: { year: 1998, month: 7, day: 31 },
       timeUnknown: true,
       gender: 'male',
@@ -97,7 +97,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   // 7. 时辰中点取样与真太阳时位移歧义
   it('Should detect shichen True Solar shift ambiguity in Urumqi', () => {
     const res = calculateDualAxisBazi({
-      place: '乌鲁木齐',
+      place: 'Urumqi',
       solarDate: { year: 1990, month: 6, day: 15 },
       shichen: '未',
       gender: 'male',
@@ -110,7 +110,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   // 8. 1901 年前中国历史时区提示
   it('Should add warning for pre-1901 China dates', () => {
     const res = calculateDualAxisBazi({
-      place: '上海',
+      place: 'Shanghai',
       solarDate: { year: 1895, month: 5, day: 1 },
       clockTime: { hour: 12, minute: 0 },
       gender: 'male',
@@ -121,7 +121,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
 
   // 9. 地理查询与消歧
   it('Should resolve city or report multiple candidates', () => {
-    const gz = lookupCity('广州');
+    const gz = lookupCity('Guangzhou');
     expect(gz.length).toBe(1);
     expect(gz[0].timezone).toBe('Asia/Shanghai');
 
@@ -130,7 +130,7 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
     expect(tacoma[0].timezone).toBe('America/Los_Angeles');
 
     expect(() => {
-      resolveLocation({ place: '非真实未知城市999' });
+      resolveLocation({ place: 'NonExistentCity999' });
     }).toThrow('未能识别出生地');
   });
 });

@@ -1,59 +1,124 @@
-import { CITIES_DATABASE } from './cities';
 import { CityEntry } from '../types';
 // @ts-ignore
 import tzlookup from 'tz-lookup';
+// @ts-ignore
+import cityTimezones from 'city-timezones';
 
-/**
- * Normalizes query string for fuzzy search (removes spaces, commas, hyphens, lowercase).
- */
-function normalizeQuery(q: string): string {
-  return q.toLowerCase().replace(/[\s,\-_市省区县\.]/g, '').trim();
+interface CityTimezoneEntry {
+  city: string;
+  city_ascii: string;
+  lat: number;
+  lng: number;
+  pop: number;
+  country: string;
+  iso2: string;
+  iso3: string;
+  province: string;
+  state_ansi?: string;
+  timezone: string;
 }
 
 /**
- * Searches the city database for matching city entries.
+ * Normalizes query string for fuzzy search.
+ */
+function normalizeQuery(q: string): string {
+  return q
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[\s,\-_\.']/g, '')
+    .trim();
+}
+
+/**
+ * Converts a city-timezones entry to our CityEntry format,
+ * using tz-lookup to correct potentially stale IANA timezone names.
+ */
+function toCityEntry(ct: CityTimezoneEntry): CityEntry {
+  let timezone = ct.timezone;
+  try {
+    // Use tz-lookup for authoritative IANA timezone from coordinates
+    timezone = tzlookup(ct.lat, ct.lng);
+  } catch {
+    // Fall back to city-timezones' own timezone
+  }
+
+  return {
+    name: ct.city,
+    country: ct.iso2,
+    province: ct.province,
+    longitude: ct.lng,
+    latitude: ct.lat,
+    timezone,
+  };
+}
+
+/**
+ * Searches the global city-timezones database (7,329 cities, 227 countries).
+ * Supports English city names, with fuzzy matching on city and city_ascii fields.
  */
 export function lookupCity(query: string): CityEntry[] {
   if (!query || !query.trim()) return [];
 
-  const raw = query.trim().toLowerCase();
   const norm = normalizeQuery(query);
+  const db: CityTimezoneEntry[] = cityTimezones.cityMapping;
 
-  const exactMatches: CityEntry[] = [];
-  const partialMatches: CityEntry[] = [];
+  const exactMatches: CityTimezoneEntry[] = [];
+  const partialMatches: CityTimezoneEntry[] = [];
 
-  for (const city of CITIES_DATABASE) {
-    const nameNorm = normalizeQuery(city.name);
-    const cnNorm = city.chineseName ? normalizeQuery(city.chineseName) : '';
-    const pinyinNorm = city.pinyin ? normalizeQuery(city.pinyin) : '';
-    const aliasNorms = (city.aliases || []).map(normalizeQuery);
+  for (const city of db) {
+    const nameNorm = normalizeQuery(city.city);
+    const asciiNorm = normalizeQuery(city.city_ascii);
+    const provinceNorm = normalizeQuery(city.province || '');
+    const countryNorm = normalizeQuery(city.country || '');
 
-    // 1. Exact match
-    if (
-      nameNorm === norm ||
-      cnNorm === norm ||
-      pinyinNorm === norm ||
-      aliasNorms.includes(norm) ||
-      city.name.toLowerCase() === raw ||
-      city.chineseName === query.trim()
-    ) {
+    // 1. Exact match on city name or ascii name
+    if (nameNorm === norm || asciiNorm === norm) {
       exactMatches.push(city);
       continue;
     }
 
-    // 2. Partial match
+    // 2. "City, Province/State" style query (e.g. "San Francisco, CA" or "Kunming, Yunnan")
+    if (norm.includes(asciiNorm) || norm.includes(nameNorm)) {
+      // Check if province/state also matches the remainder
+      const remainder = norm.replace(asciiNorm, '').replace(nameNorm, '');
+      if (
+        remainder.length === 0 ||
+        provinceNorm.includes(remainder) ||
+        countryNorm.includes(remainder) ||
+        (city.state_ansi && normalizeQuery(city.state_ansi) === remainder)
+      ) {
+        exactMatches.push(city);
+        continue;
+      }
+    }
+
+    // 3. Partial match
     if (
       nameNorm.includes(norm) ||
-      norm.includes(nameNorm) ||
-      (cnNorm && (cnNorm.includes(norm) || norm.includes(cnNorm))) ||
-      (pinyinNorm && pinyinNorm.includes(norm)) ||
-      aliasNorms.some(a => a.includes(norm) || norm.includes(a))
+      asciiNorm.includes(norm) ||
+      (norm.length >= 3 && (nameNorm.startsWith(norm) || asciiNorm.startsWith(norm)))
     ) {
       partialMatches.push(city);
     }
   }
 
-  return exactMatches.length > 0 ? exactMatches : partialMatches;
+  // Deduplicate by city name + country, preferring higher population
+  let rawResults = exactMatches.length > 0 ? exactMatches : partialMatches;
+  rawResults.sort((a, b) => (b.pop || 0) - (a.pop || 0));
+
+  const seen = new Set<string>();
+  const results: CityEntry[] = [];
+
+  for (const r of rawResults) {
+    const key = `${r.city}|${r.country}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      results.push(toCityEntry(r));
+    }
+  }
+
+  return results.slice(0, 10); // Limit to 10 results
 }
 
 export interface ResolvedLocation {
@@ -66,9 +131,9 @@ export interface ResolvedLocation {
 
 /**
  * Resolves location according to BaziInput contract:
- * - If explicit longitude AND timezone are provided, use them directly (place is optional label).
- * - If place is provided, look up coordinates and IANA timezone from GeoNames city database.
- * - If only coordinates (longitude + latitude) are provided, use tz-lookup to resolve IANA timezone.
+ * - If explicit longitude AND timezone are provided, use them directly.
+ * - If place is provided, look up coordinates and IANA timezone from city-timezones.
+ * - If only coordinates (longitude + latitude) are provided, use tz-lookup.
  * - If place resolves to multiple candidates, throw an error listing candidates.
  * - If place cannot be resolved, throw descriptive error.
  */
@@ -109,19 +174,33 @@ export function resolveLocation(input: {
       }
 
       throw new Error(
-        `未能识别出生地 "${input.place}"。请改用显式字段传入 \`longitude\` (东经为正) 和 \`timezone\` (IANA 时区名，如 "Asia/Shanghai" 或 "America/Los_Angeles")。`
+        `未能识别出生地 "${input.place}"。请使用英文城市名（如 "Beijing", "New York", "Lagos"），或显式传入 \`longitude\` 和 \`timezone\`。`
       );
     }
 
     if (candidates.length > 1) {
+      // Check if top result is a strong exact match — if so, just use it
+      const topName = normalizeQuery(candidates[0].name);
+      const queryNorm = normalizeQuery(input.place);
+      if (topName === queryNorm) {
+        const city = candidates[0];
+        return {
+          longitude: input.longitude !== undefined ? input.longitude : city.longitude,
+          timezone: input.timezone || city.timezone,
+          latitude: input.latitude !== undefined ? input.latitude : city.latitude,
+          placeName: `${city.name} (${city.country})`,
+        };
+      }
+
       const listStr = candidates
+        .slice(0, 5)
         .map(
           c =>
-            `• ${c.chineseName || c.name} (${c.name}, ${c.province || c.country}) -> 经度: ${c.longitude}°, 时区: "${c.timezone}"`
+            `• ${c.name} (${c.province || ''}, ${c.country}) -> 经度: ${c.longitude}°, 时区: "${c.timezone}"`
         )
         .join('\n');
       throw new Error(
-        `地名 "${input.place}" 匹配到多个候选城市，请显式选择或指定 \`longitude\` 与 \`timezone\`:\n${listStr}`
+        `地名 "${input.place}" 匹配到多个候选城市，请更精确指定（如 "San Francisco, CA"）或指定 \`longitude\` 与 \`timezone\`:\n${listStr}`
       );
     }
 
@@ -130,7 +209,7 @@ export function resolveLocation(input: {
       longitude: input.longitude !== undefined ? input.longitude : city.longitude,
       timezone: input.timezone || city.timezone,
       latitude: input.latitude !== undefined ? input.latitude : city.latitude,
-      placeName: `${city.chineseName || city.name} (${city.country})`,
+      placeName: `${city.name} (${city.country})`,
     };
   }
 
@@ -164,6 +243,6 @@ export function resolveLocation(input: {
   }
 
   throw new Error(
-    '缺少出生地信息：请提供 `place` (如 "广州", "Tacoma, WA")，或同时提供 `longitude` 与 `timezone`。'
+    '缺少出生地信息：请提供 `place` (英文城市名，如 "Beijing", "New York", "Lagos")，或同时提供 `longitude` 与 `timezone`。'
   );
 }

@@ -86,7 +86,7 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
         params: {
           name: 'calculate_bazi',
           arguments: {
-            place: '北京',
+            place: 'Beijing',
             solarDate: { year: 1998, month: 7, day: 31 },
             timeUnknown: true,
             gender: 'male',
@@ -113,7 +113,7 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
         params: {
           name: 'lookup_location',
           arguments: {
-            query: '乌鲁木齐',
+            query: 'Urumqi',
           },
         },
       },
@@ -123,7 +123,8 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
     expect(response.isError).toBeFalsy();
     const resultObj = JSON.parse(response.content[0].text);
     expect(resultObj.count).toBeGreaterThan(0);
-    expect(resultObj.results[0].timezone).toBe('Asia/Shanghai');
+    expect(resultObj.results[0].name).toBe('Urumqi');
+    expect(resultObj.results[0].timezone).toBe('Asia/Urumqi');
   });
 
   it('Should return graceful error for invalid tool call arguments', async () => {

@@ -17,7 +17,8 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 钟表 13:30（看似未时），但在喀什其实际太阳高度角为 10:34（实为巳时！）
     it('中国极西：新疆喀什 (Kashgar - 大经差延迟近3小时)', () => {
       const res = calculateDualAxisBazi({
-        place: '喀什',
+        place: 'Kashgar',
+        timezone: 'Asia/Shanghai', // Many residents use Beijing Time officially
         solarDate: { year: 2024, month: 6, day: 1 },
         clockTime: { hour: 13, minute: 30 },
         gender: 'male',
@@ -34,7 +35,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 经度超前 6.54°，真太阳时比北京时间早约 26 分钟
     it('中国极东：黑龙江哈尔滨 (Harbin - 经度超前约26分钟)', () => {
       const res = calculateDualAxisBazi({
-        place: '哈尔滨',
+        place: 'Harbin',
         solarDate: { year: 2024, month: 10, day: 1 },
         clockTime: { hour: 6, minute: 40 },
         gender: 'male',
@@ -48,7 +49,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 经度差 -28.88°，时差约 -115.5 分钟（近 2 小时）
     it('中国极高：西藏拉萨 (Lhasa - 经度差约2小时)', () => {
       const res = calculateDualAxisBazi({
-        place: '拉萨',
+        place: 'Lhasa',
         solarDate: { year: 2024, month: 5, day: 20 },
         clockTime: { hour: 12, minute: 30 },
         gender: 'female',
@@ -60,7 +61,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 4. 中国极南：海南三亚 (Sanya 109.51°E)
     it('中国极南：海南三亚 (Sanya - 热带海岛)', () => {
       const res = calculateDualAxisBazi({
-        place: '三亚',
+        place: 'Sanya',
         solarDate: { year: 2024, month: 8, day: 15 },
         clockTime: { hour: 12, minute: 0 },
         gender: 'male',
@@ -72,7 +73,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 5. 港澳台地区：香港、台北
     it('中国港台：香港与台北 (Hong Kong & Taipei)', () => {
       const hk = calculateDualAxisBazi({
-        place: '香港',
+        place: 'Hong Kong',
         solarDate: { year: 2023, month: 1, day: 1 },
         clockTime: { hour: 9, minute: 30 },
         gender: 'male',
@@ -80,7 +81,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
       expect(hk.诊断.钟面).toContain('Asia/Hong_Kong');
 
       const tw = calculateDualAxisBazi({
-        place: '台北',
+        place: 'Taipei',
         solarDate: { year: 2023, month: 1, day: 1 },
         clockTime: { hour: 9, minute: 30 },
         gender: 'female',
@@ -91,7 +92,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
     // 6. 西南与华中：成都 (Chengdu)、武汉 (Wuhan)、西安 (Xi\'an)
     it('西南与华中：成都、武汉、西安', () => {
       const cd = calculateDualAxisBazi({
-        place: '成都',
+        place: 'Chengdu',
         solarDate: { year: 2024, month: 3, day: 15 },
         clockTime: { hour: 12, minute: 0 },
         gender: 'male',
@@ -100,7 +101,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
       expect(cd.诊断.经度修正分钟).toBeCloseTo(-63.7, 0);
 
       const wh = calculateDualAxisBazi({
-        place: '武汉',
+        place: 'Wuhan',
         solarDate: { year: 2024, month: 3, day: 15 },
         clockTime: { hour: 12, minute: 0 },
         gender: 'male',
@@ -202,7 +203,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
 
       it('远东俄罗斯：海参崴 (Vladivostok - UTC+10)', () => {
         const vld = calculateDualAxisBazi({
-          place: '符拉迪沃斯托克',
+          place: 'Vladivostok',
           solarDate: { year: 2024, month: 8, day: 1 },
           clockTime: { hour: 14, minute: 0 },
           gender: 'male',
@@ -212,7 +213,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
 
       it('北欧冰岛：雷克雅未克 (Reykjavik - 永久无夏令时 UTC+0)', () => {
         const ryk = calculateDualAxisBazi({
-          place: '雷克雅未克',
+          place: 'Reykjavík',
           solarDate: { year: 2024, month: 7, day: 1 },
           clockTime: { hour: 12, minute: 0 },
           gender: 'male',
@@ -246,7 +247,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
 
       it('赤道城市：新加坡 (Singapore - UTC+8)', () => {
         const sg = calculateDualAxisBazi({
-          place: '新加坡',
+          place: 'Singapore',
           solarDate: { year: 2024, month: 8, day: 9 },
           clockTime: { hour: 12, minute: 0 },
           gender: 'male',
@@ -276,7 +277,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
 
       it('中东海湾：阿联酋迪拜 (Dubai - UTC+4)', () => {
         const dxb = calculateDualAxisBazi({
-          place: '迪拜',
+          place: 'Dubai',
           solarDate: { year: 2024, month: 11, day: 1 },
           clockTime: { hour: 13, minute: 0 },
           gender: 'male',
@@ -309,7 +310,7 @@ describe('全球多地域排盘实测 (Global Multi-Region Bazi Tests)', () => {
 
       it('澳大利亚西澳：珀斯 (Perth - UTC+8 无夏令时)', () => {
         const perth = calculateDualAxisBazi({
-          place: '珀斯',
+          place: 'Perth',
           solarDate: { year: 2024, month: 1, day: 10 },
           clockTime: { hour: 12, minute: 0 },
           gender: 'female',

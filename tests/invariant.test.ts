@@ -15,7 +15,7 @@ describe('8.2 Invariant Tests (不变量测试)', () => {
 
     // 2. Beijing (Asia/Shanghai, UTC+8): 2024-02-05 00:00
     const beijing = calculateDualAxisBazi({
-      place: '北京',
+      place: 'Beijing',
       solarDate: { year: 2024, month: 2, day: 5 },
       clockTime: { hour: 0, minute: 0 },
       gender: 'male',
