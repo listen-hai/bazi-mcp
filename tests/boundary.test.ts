@@ -61,7 +61,7 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(resFold1.pillars.hour?.ganZhi).toBe('己丑');
   });
 
-  // docs/spec.md §6③'s own example: China's 1988 DST fall-back fold on home turf.
+  // China's 1988 DST fall-back fold, on home turf.
   it('Should disambiguate a China DST fall-back fold (1988-09-11 01:30 Asia/Shanghai)', () => {
     expect(() => {
       calculateDualAxisBazi({

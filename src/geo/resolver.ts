@@ -144,9 +144,9 @@ export interface ResolvedLocation {
  *   so the calling agent can clarify with the user. Never silently guess.
  * - If place cannot be resolved, throws descriptive error.
  *
- * Note: latitude is not accepted as an input (docs/spec.md §5: latitude is
- * deliberately not accepted) — only longitude + timezone or place are
- * supported entry points.
+ * Note: latitude is deliberately not accepted as an input — Axis A uses only
+ * the timezone and Axis B only the longitude, so only longitude + timezone or
+ * place are supported entry points.
  */
 export function resolveLocation(input: {
   place?: string;

@@ -108,7 +108,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"London"`, `"Lagos"`). AI agents automatically translate any user language. |
+| `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"Lagos"`, `"London, United Kingdom"`). AI agents automatically translate any user language. |
 | `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`) |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
 | `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` |

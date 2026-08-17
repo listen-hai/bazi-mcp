@@ -112,7 +112,7 @@ bazi-mcp
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `place` | string | 可选 | 城市英文名称（如 `"Beijing"`、`"New York"`、`"Tacoma, WA"`、`"London"`）。AI Agent 会自动翻译用户的任意语言输入。 |
+| `place` | string | 可选 | 城市英文名称（如 `"Beijing"`、`"New York"`、`"Tacoma, WA"`、`"London, United Kingdom"`）。AI Agent 会自动翻译用户的任意语言输入。 |
 | `longitude` | number | 可选 | 出生地经度（东经为正，如 `102.8329`，西经为负，如 `-122.4443`） |
 | `timezone` | string | 可选 | 官方 IANA 时区名称（如 `"Asia/Shanghai"`、`"America/Los_Angeles"`） |
 | `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1993, "month": 7, "day": 14 }` |
