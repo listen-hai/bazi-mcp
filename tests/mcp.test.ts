@@ -124,7 +124,11 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
     const resultObj = JSON.parse(response.content[0].text);
     expect(resultObj.count).toBeGreaterThan(0);
     expect(resultObj.results[0].name).toBe('Urumqi');
-    expect(resultObj.results[0].timezone).toBe('Asia/Urumqi');
+    // China civil-time policy: mainland places (incl. Xinjiang) report the
+    // civil zone (Beijing time) as `timezone`, with the geographic zone
+    // carried separately so callers can opt into it explicitly.
+    expect(resultObj.results[0].timezone).toBe('Asia/Shanghai');
+    expect(resultObj.results[0].geographicTimezone).toBe('Asia/Urumqi');
   });
 
   it('Should return graceful error for invalid tool call arguments', async () => {
@@ -147,6 +151,38 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBe(true);
     expect(response.content[0].text).toContain('[八字排盘错误]');
+  });
+
+  it('Should flatten ZodError conflicts (solarDate + lunarDate) into a plain message, not JSON', async () => {
+    const server = createBaziMcpServer();
+    // @ts-ignore
+    const handler = server._requestHandlers.get(CallToolRequestSchema.shape.method.value);
+
+    const response = await handler!(
+      {
+        method: 'tools/call',
+        params: {
+          name: 'calculate_bazi',
+          arguments: {
+            solarDate: { year: 1988, month: 7, day: 1 },
+            lunarDate: { year: 1988, month: 5, day: 18 },
+            clockTime: { hour: 7, minute: 20 },
+            timezone: 'Asia/Shanghai',
+            longitude: 116.4074,
+            gender: 'male',
+          },
+        },
+      },
+      {}
+    );
+
+    expect(response.isError).toBe(true);
+    const text = response.content[0].text;
+    expect(text).toContain('[八字排盘错误]');
+    expect(text).toContain('不能同时提供 solarDate');
+    // Must not leak raw zod issue JSON (code/path arrays etc.)
+    expect(text).not.toContain('"code"');
+    expect(text).not.toContain('"path"');
   });
 
   it('Should return graceful error for unknown tool name', async () => {

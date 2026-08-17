@@ -19,6 +19,13 @@ function normalizeQuery(q: string): string {
 /**
  * Converts a city-timezones entry to our CityEntry format,
  * using @photostructure/tz-lookup to ensure authoritative IANA timezone resolution.
+ *
+ * China has used a single civil time zone (Beijing time, Asia/Shanghai, UTC+8)
+ * nationwide since 1949; birth records across the mainland are kept in it. So for
+ * any CN city whose coordinate-derived zone isn't Asia/Shanghai (Xinjiang cities
+ * genuinely sit in Asia/Urumqi; a couple of border cities get a neighbouring
+ * country's zone from tz-lookup imprecision, e.g. Pingxiang/Guangxi -> Bangkok),
+ * default `timezone` to Asia/Shanghai and record the geographic zone separately.
  */
 function toCityEntry(ct: CityTimezoneEntry): CityEntry {
   let timezone = ct.timezone;
@@ -28,6 +35,12 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
     // Fall back to city-timezones's own timezone value
   }
 
+  let geographicTimezone: string | undefined;
+  if (ct.iso2 === 'CN' && timezone !== 'Asia/Shanghai') {
+    geographicTimezone = timezone;
+    timezone = 'Asia/Shanghai';
+  }
+
   return {
     name: ct.city,
     country: ct.iso2,
@@ -35,6 +48,7 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
     longitude: ct.lng,
     latitude: ct.lat,
     timezone,
+    geographicTimezone,
   };
 }
 
@@ -113,6 +127,21 @@ export interface ResolvedLocation {
   latitude?: number;
   placeName?: string;
   warning?: string;
+  geographicTimezone?: string;
+}
+
+/**
+ * Xinjiang is a genuine dual civil-time convention (unlike the Bangkok/Kolkata
+ * border artifacts, which are silently corrected with no user-facing message):
+ * some households keep 新疆当地时间 (UTC+6), two hours behind Beijing time.
+ * Surface this as a warning + explicit override instruction rather than guessing.
+ */
+function xinjiangOverrideNote(city: CityEntry): Pick<ResolvedLocation, 'warning' | 'geographicTimezone'> {
+  if (city.geographicTimezone !== 'Asia/Urumqi') return {};
+  return {
+    geographicTimezone: city.geographicTimezone,
+    warning: `出生地位于新疆，地理时区为 "Asia/Urumqi"，但已按中国大陆统一的北京时间（Asia/Shanghai, UTC+8）排盘。新疆部分家庭仍按新疆当地时间（UTC+6，比北京时间晚2小时）记录出生时刻；如确认应按新疆当地时间排盘，请显式传入 \`timezone: "Asia/Urumqi"\`。`,
+  };
 }
 
 /**
@@ -159,6 +188,7 @@ export function resolveLocation(input: {
           timezone: input.timezone || city.timezone,
           latitude: city.latitude,
           placeName: `${city.name} (${city.country})`,
+          ...(input.timezone ? {} : xinjiangOverrideNote(city)),
         };
       }
 
@@ -180,6 +210,7 @@ export function resolveLocation(input: {
       timezone: input.timezone || city.timezone,
       latitude: city.latitude,
       placeName: `${city.name} (${city.country})`,
+      ...(input.timezone ? {} : xinjiangOverrideNote(city)),
     };
   }
 

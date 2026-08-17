@@ -114,6 +114,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     longitude: input.longitude,
     timezone: input.timezone,
   });
+  if (loc.warning) {
+    warnings.push(loc.warning);
+  }
 
   const dayBoundaryMode: DayBoundaryMode =
     input.sect === 2 ? 'ZI_HOUR_23' : 'MIDNIGHT_00';
@@ -425,6 +428,11 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       年龄基准: '虚岁',
     },
     时辰歧义: shichenAmbiguityDiag,
+    时区口径: loc.geographicTimezone ? {
+      使用: loc.timezone,
+      地理时区: loc.geographicTimezone,
+      说明: '出生地位于新疆，经纬度推算的地理时区与已采用的中国大陆统一民用时区（北京时间）不同；如需按新疆当地时间排盘，请显式传入 timezone: "Asia/Urumqi"。',
+    } : undefined,
     historicalTzApprox,
     警告: warnings,
     引擎信息: {

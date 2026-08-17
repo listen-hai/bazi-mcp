@@ -264,4 +264,61 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // 12. 中国民用时区口径：新疆按北京时间排盘，并给出可选的地理时区提示
+  it('Should default Urumqi (Xinjiang) to Beijing civil time with a 时区口径 diagnostic and warning', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Urumqi',
+      solarDate: { year: 1990, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      gender: 'male',
+    });
+    expect(result.诊断.钟面).toContain('Asia/Shanghai');
+    expect(result.诊断.时区口径).toEqual({
+      使用: 'Asia/Shanghai',
+      地理时区: 'Asia/Urumqi',
+      说明: expect.any(String),
+    });
+    expect(result.诊断.警告.some(w => w.includes('新疆当地时间'))).toBe(true);
+  });
+
+  // 13. 同一政策通过 lunarDate 入口同样生效
+  it('Should apply the same Urumqi civil-time policy via the lunarDate input path', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Urumqi',
+      lunarDate: { year: 1990, month: 4, day: 23 },
+      clockTime: { hour: 8, minute: 0 },
+      gender: 'male',
+    });
+    expect(result.诊断.钟面).toContain('Asia/Shanghai');
+    expect(result.诊断.时区口径?.地理时区).toBe('Asia/Urumqi');
+    expect(result.诊断.警告.some(w => w.includes('新疆当地时间'))).toBe(true);
+  });
+
+  // 14. 边界误差城市（Pingxiang/Guangxi 经纬度落入 tz-lookup 的 Asia/Bangkok）静默纠正，不询问用户
+  it('Should silently correct a CN border tz-lookup artifact (Pingxiang, Guangxi) with no ask-the-user warning', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Pingxiang, Guangxi',
+      solarDate: { year: 1990, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      gender: 'male',
+    });
+    expect(result.诊断.钟面).toContain('Asia/Shanghai');
+    expect(result.诊断.时区口径).toBeUndefined();
+    expect(result.诊断.警告).toEqual([]);
+  });
+
+  // 15. 显式传入 timezone 是逃生舱：不做覆盖，也不产生警告
+  it('Should respect an explicit timezone: "Asia/Urumqi" override with no warning', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Urumqi',
+      timezone: 'Asia/Urumqi',
+      solarDate: { year: 1990, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      gender: 'male',
+    });
+    expect(result.诊断.钟面).toContain('Asia/Urumqi');
+    expect(result.诊断.时区口径).toBeUndefined();
+    expect(result.诊断.警告).toEqual([]);
+  });
 });

@@ -95,6 +95,11 @@ export interface DiagnosticsOutput {
     isAmbiguous: boolean;
     候选时柱: string[];
   };
+  时区口径?: {
+    使用: string;
+    地理时区: string;
+    说明: string;
+  };
   historicalTzApprox?: boolean;
   警告: string[];
   引擎信息: {
@@ -131,4 +136,5 @@ export interface CityEntry {
   longitude: number;
   latitude: number;
   timezone: string;
+  geographicTimezone?: string;
 }

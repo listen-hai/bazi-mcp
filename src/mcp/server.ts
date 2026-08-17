@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -28,7 +29,7 @@ export function createBaziMcpServer(): Server {
     {
       name: 'calculate_bazi',
       description:
-        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York").',
+        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York"). Pass exactly ONE of `solarDate`/`lunarDate` and ONE of `clockTime`/`shichen`/`timeUnknown` — conflicting combinations are rejected rather than silently resolved. Chinese mainland places default to Beijing civil time (UTC+8); for Xinjiang the geographic zone is reported separately and can be selected by passing `timezone` explicitly.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -119,7 +120,7 @@ export function createBaziMcpServer(): Server {
     },
     {
       name: 'lookup_location',
-      description: 'Look up a city\'s geographic coordinates (latitude, longitude) and official IANA timezone. IMPORTANT: Use ENGLISH city names only. If the user provides a name in another language, translate it to English first (e.g. 东京 → "Tokyo", 巴黎 → "Paris"). Covers 7,329 cities across 227 countries.',
+      description: 'Look up a city\'s geographic coordinates (latitude, longitude) and official IANA timezone. IMPORTANT: Use ENGLISH city names only. If the user provides a name in another language, translate it to English first (e.g. 东京 → "Tokyo", 巴黎 → "Paris"). Covers 7,329 cities across 227 countries. Chinese mainland places default to Beijing civil time (UTC+8); for Xinjiang the geographic zone is reported separately and can be selected by passing `timezone` explicitly.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -179,7 +180,9 @@ export function createBaziMcpServer(): Server {
 
       throw new Error(`未知的 MCP 工具: ${name}`);
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
+      const errMsg = err instanceof z.ZodError
+        ? err.issues.map(i => i.message).join('; ')
+        : err instanceof Error ? err.message : String(err);
       return {
         isError: true,
         content: [
