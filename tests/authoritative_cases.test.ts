@@ -154,4 +154,71 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.fourPillars).toBe('甲辰 壬申 戊子 庚申');
     expect(res.dayMaster.char).toBe('戊');
   });
+
+  // ── III. Cross-checked against an independent Bazi application ──
+
+  // These two charts were produced by a third-party Bazi app, which reports the
+  // birth's *true solar time* rather than the wall clock and birthplace. Feeding
+  // that true solar time back in with trueSolar disabled therefore checks the
+  // half of the pipeline the app's output can pin down: pillar derivation, Ten
+  // Gods against the day master, naYin and void branches. It does not exercise
+  // the true-solar-time calculation itself — that needs the original birthplace
+  // and clock time, which the source did not report.
+  //
+  // Every Ten God below is asserted because they are what the earlier reversed
+  // calculateTenGod argument order corrupted, and they were the last thing to be
+  // covered by any test.
+
+  // 11. Third-party app cross-check, male chart
+  // True solar time 1993-07-14 10:11 (巳 hour), born 6d23h after 小暑 (1993-07-07 10:32)
+  it('Cross-check: true solar time 1993-07-14 10:11 -> 癸酉 己未 丙申 癸巳', () => {
+    const res = calculateDualAxisBazi({
+      longitude: 120,
+      timezone: 'Asia/Shanghai',
+      trueSolar: false,
+      solarDate: { year: 1993, month: 7, day: 14 },
+      clockTime: { hour: 10, minute: 11 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('癸酉 己未 丙申 癸巳');
+    expect(res.dayMaster.char).toBe('丙');
+
+    expect(res.pillars.year.stemTenGod).toBe('正官');
+    expect(res.pillars.month.stemTenGod).toBe('伤官');
+    expect(res.pillars.day.stemTenGod).toBe('日主');
+    expect(res.pillars.hour?.stemTenGod).toBe('正官');
+
+    // 申 hides 庚/壬/戊 -> 偏财/七杀/食神 against day master 丙
+    expect(res.pillars.day.hiddenStems?.map(h => h.tenGod)).toEqual(['偏财', '七杀', '食神']);
+
+    expect(res.pillars.year.naYin).toBe('剑锋金');
+    expect(res.pillars.hour?.naYin).toBe('长流水');
+    expect(res.pillars.day.voidBranches).toEqual(['辰', '巳']);
+  });
+
+  // 12. Third-party app cross-check, female chart
+  // True solar time 1993-05-20 09:32 (巳 hour), born 14d13h after 立夏 (1993-05-05 20:01)
+  it('Cross-check: true solar time 1993-05-20 09:32 -> 癸酉 丁巳 辛丑 癸巳', () => {
+    const res = calculateDualAxisBazi({
+      longitude: 120,
+      timezone: 'Asia/Shanghai',
+      trueSolar: false,
+      solarDate: { year: 1993, month: 5, day: 20 },
+      clockTime: { hour: 9, minute: 32 },
+      gender: 'female',
+    });
+    expect(res.fourPillars).toBe('癸酉 丁巳 辛丑 癸巳');
+    expect(res.dayMaster.char).toBe('辛');
+
+    expect(res.pillars.year.stemTenGod).toBe('食神');
+    expect(res.pillars.month.stemTenGod).toBe('七杀');
+    expect(res.pillars.day.stemTenGod).toBe('日主');
+    expect(res.pillars.hour?.stemTenGod).toBe('食神');
+
+    // 丑 hides 己/癸/辛 -> 偏印/食神/比肩 against day master 辛
+    expect(res.pillars.day.hiddenStems?.map(h => h.tenGod)).toEqual(['偏印', '食神', '比肩']);
+
+    expect(res.pillars.month.naYin).toBe('沙中土');
+    expect(res.pillars.day.naYin).toBe('壁上土');
+  });
 });
