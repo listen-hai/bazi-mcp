@@ -27,27 +27,24 @@ import {
   instantToWall,
   toUTCWall,
   formatOffsetString,
+  WallToInstantResult,
 } from './time';
 import { resolveLocation } from '../geo/resolver';
 import { getShichenMidpoint, getShichenSamplePoints } from './shichen';
 
 /**
  * Normalizes pillar output and computes Ten Gods against the true Day Master.
+ * `日主` (Day Master) is only correct for the day pillar itself — any other
+ * pillar whose stem happens to match the day master's stem is 比肩 like any
+ * other stem comparison, so the label is gated on `isDayPillar` rather than a
+ * stem equality check.
  */
 function formatPillar(
-  pillar: Pillar | null | undefined,
-  dayMasterStem: string
+  pillar: Pillar,
+  dayMasterStem: string,
+  isDayPillar: boolean
 ): PillarOutput {
-  if (!pillar) {
-    return {
-      stem: '',
-      branch: '',
-      ganZhi: '',
-      element: '',
-    };
-  }
-
-  const stemTenGod = pillar.stem === dayMasterStem ? '日主' : calculateTenGod(dayMasterStem, pillar.stem);
+  const stemTenGod = isDayPillar ? '日主' : calculateTenGod(dayMasterStem, pillar.stem);
 
   const hiddenStems = (pillar.hiddenStems || []).map((h: HiddenStemInfo) => ({
     stem: h.stem,
@@ -124,6 +121,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   let instant: number;
   let offsetMinutes: number;
   let isDst: boolean;
+  // Set only when the local wall clock had more than one UTC candidate (a DST
+  // fall-back fold); carries the already-resolved offset through to Axis B (FIX 1).
+  let localFoldOffsetMinutes: number | undefined;
   let lunarDiag: DiagnosticsOutput['lunar'] = undefined;
 
   // Determine clock time (hour, minute)
@@ -144,6 +144,35 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   } else {
     // If no time is given and timeUnknown not explicitly set, throw error
     throw new Error('Missing time information: please provide `clockTime` (clock time), `shichen` (traditional double-hour), or set `timeUnknown: true` (3-pillar chart).');
+  }
+
+  // Resolves a local wall clock to a UTC instant. If the wall clock was built
+  // from a shichen midpoint and lands exactly in a DST spring-forward gap,
+  // falls back to the first shichen sample point (start/mid/end) that does
+  // exist rather than telling someone genuinely born in that shichen that
+  // their birth record is wrong (FIX 6).
+  function resolveWallInstant(wall: WallDateTime, tz: string): { wall: WallDateTime; result: WallToInstantResult } {
+    try {
+      return { wall, result: wallToInstant(wall, tz, input.dstFold) };
+    } catch (err) {
+      if (!input.shichen || input.clockTime || !(err as Error).message.includes('spring-forward gap')) {
+        throw err;
+      }
+      for (const pt of getShichenSamplePoints(input.shichen)) {
+        if (pt.hour === wall.hour && pt.minute === wall.minute) continue;
+        try {
+          const fallbackWall = { ...wall, hour: pt.hour, minute: pt.minute };
+          const result = wallToInstant(fallbackWall, tz, input.dstFold);
+          warnings.push(
+            `The midpoint of shichen "${input.shichen}" (${String(wall.hour).padStart(2, '0')}:${String(wall.minute).padStart(2, '0')}) falls in a DST spring-forward gap and does not exist; used ${String(pt.hour).padStart(2, '0')}:${String(pt.minute).padStart(2, '0')} instead. Please double-check the exact clock time.`
+          );
+          return { wall: fallbackWall, result };
+        } catch {
+          // try the next sample point
+        }
+      }
+      throw err;
+    }
   }
 
   // 3. Handle Lunar vs Solar Date
@@ -183,10 +212,12 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
         second: 0,
       };
 
-      const wRes = wallToInstant(localWall, loc.timezone, input.dstFold);
+      const { wall: resolvedWall, result: wRes } = resolveWallInstant(localWall, loc.timezone);
+      localWall = resolvedWall;
       instant = wRes.instant;
       offsetMinutes = wRes.offsetMinutes;
       isDst = wRes.isDst;
+      if (wRes.candidates) localFoldOffsetMinutes = wRes.offsetMinutes;
 
       beijingWall = instantToWall(instant, 'Asia/Shanghai');
     } else {
@@ -237,10 +268,12 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       second: 0,
     };
 
-    const wRes = wallToInstant(localWall, loc.timezone, input.dstFold);
+    const { wall: resolvedWall, result: wRes } = resolveWallInstant(localWall, loc.timezone);
+    localWall = resolvedWall;
     instant = wRes.instant;
     offsetMinutes = wRes.offsetMinutes;
     isDst = wRes.isDst;
+    if (wRes.candidates) localFoldOffsetMinutes = wRes.offsetMinutes;
 
     beijingWall = instantToWall(instant, 'Asia/Shanghai');
   } else {
@@ -302,18 +335,32 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   // 6. Calculate Axis B (Local Wall Clock + IANA Timezone + Birth Longitude)
   // Calculates True Solar Time; determines Day Pillar and Hour Pillar
   const enableTrueSolar = input.trueSolar !== false;
-  const B = calculateBaziChart({
-    year: localWall.year,
-    month: localWall.month,
-    day: localWall.day,
-    hour: localWall.hour,
-    minute: localWall.minute,
-    gender: input.gender,
-    longitude: loc.longitude,
-    timezoneId: loc.timezone,
-    enableTrueSolarTime: enableTrueSolar,
-    dayBoundaryMode,
-  });
+
+  // The engine re-derives its own UTC instant from wall+timezoneId internally
+  // and silently takes the first DST fall-back fold, discarding whichever
+  // fold `dstFold` resolved. So when the wall clock was ambiguous
+  // (foldOffsetMinutes given), pass the already-resolved numeric
+  // fractional-hour offset instead of timezoneId; otherwise keep timezoneId
+  // so pre-1901 sub-minute LMT offsets (e.g. Shanghai +08:05:43) stay exact
+  // (FIX 1). One helper for both call sites (main chart + shichen sampling
+  // below) so the fix can't drift between them (FIX 4).
+  const axisBChart = (wall: { year: number; month: number; day: number; hour: number; minute: number }, foldOffsetMinutes?: number) =>
+    calculateBaziChart({
+      year: wall.year,
+      month: wall.month,
+      day: wall.day,
+      hour: wall.hour,
+      minute: wall.minute,
+      gender: input.gender,
+      longitude: loc.longitude,
+      ...(foldOffsetMinutes !== undefined
+        ? { timezone: foldOffsetMinutes / 60 }
+        : { timezoneId: loc.timezone }),
+      enableTrueSolarTime: enableTrueSolar,
+      dayBoundaryMode,
+    });
+
+  const B = axisBChart(localWall, localFoldOffsetMinutes);
 
   // Extract Solar Time details via @openfate/true-solar-time from instant directly
   const solarTimeDetail = getTrueSolarTimeFromInstant(
@@ -331,7 +378,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       try {
         // Throws on a DST gap (nonexistent wall time); the catch below then
         // skips this sample point entirely.
-        wallToInstant(
+        const sampleWRes = wallToInstant(
           {
             year: localWall.year,
             month: localWall.month,
@@ -343,18 +390,10 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
           input.dstFold
         );
 
-        const sampleB = calculateBaziChart({
-          year: localWall.year,
-          month: localWall.month,
-          day: localWall.day,
-          hour: pt.hour,
-          minute: pt.minute,
-          gender: input.gender,
-          longitude: loc.longitude,
-          timezoneId: loc.timezone,
-          enableTrueSolarTime: enableTrueSolar,
-          dayBoundaryMode,
-        });
+        const sampleB = axisBChart(
+          { year: localWall.year, month: localWall.month, day: localWall.day, hour: pt.hour, minute: pt.minute },
+          sampleWRes.candidates ? sampleWRes.offsetMinutes : undefined
+        );
 
         if (sampleB.pillars.hour) {
           candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
@@ -389,10 +428,12 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   const trueDayMasterStem = B.pillars.day.stem;
   const dayMaster = B.dayMaster;
 
-  const yearPillar = formatPillar(A.pillars.year, trueDayMasterStem);
-  const monthPillar = formatPillar(A.pillars.month, trueDayMasterStem);
-  const dayPillar = formatPillar(B.pillars.day, trueDayMasterStem);
-  const hourPillar = isUnknownTime ? null : formatPillar(B.pillars.hour, trueDayMasterStem);
+  const yearPillar = formatPillar(A.pillars.year, trueDayMasterStem, false);
+  const monthPillar = formatPillar(A.pillars.month, trueDayMasterStem, false);
+  const dayPillar = formatPillar(B.pillars.day, trueDayMasterStem, true);
+  // B.pillars.hour is only null when hour/minute weren't supplied to the engine;
+  // we always supply them when !isUnknownTime, so this is safe.
+  const hourPillar = isUnknownTime ? null : formatPillar(B.pillars.hour!, trueDayMasterStem, false);
 
   const fourPillarsStr = isUnknownTime
     ? `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`
@@ -405,8 +446,8 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     branch: c.branch,
     ganZhi: c.ganZhi,
     startYear: c.startYear,
-    startAgeNominal: c.startAge + 1, // nominal age
-    startAgeExact: c.startAge,       // exact age
+    startAgeNominal: c.startAge + 1,     // nominal age
+    startAgeInWholeYears: c.startAge,    // whole years only, not precise — see startOffset
     endYear: c.endYear,
     endAgeNominal: c.endAge + 1,
     stemTenGod: calculateTenGod(trueDayMasterStem, c.stem),

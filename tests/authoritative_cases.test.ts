@@ -27,6 +27,11 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.fourPillars).toBe('丙戌 甲午 己未 己巳');
     expect(res.dayMaster.char).toBe('己');
     expect(res.diagnostics.utcOffset).toContain('DST in effect');
+    // 日主 (Day Master) is a label for the day pillar only. The hour pillar's
+    // stem (己) also happens to equal the day master (己), but that makes it
+    // 比肩 (a peer stem), not a second 日主.
+    expect(res.pillars.hour?.stemTenGod).toBe('比肩');
+    expect(res.pillars.day.stemTenGod).toBe('日主');
   });
 
   // 2. Barack Obama
@@ -220,5 +225,99 @@ describe('Authoritative Real-World Benchmark Suite', () => {
 
     expect(res.pillars.month.naYin).toBe('沙中土');
     expect(res.pillars.day.naYin).toBe('壁上土');
+  });
+
+  // ── IV. Independently-verified spot cases (day pillar via (JDN+49) mod 60,
+  // hour stem via the Five Rats rule, cross-checked against the implementation) ──
+
+  it('China DST +9: 1989-09-16 23:30 Asia/Shanghai stays in 亥 (true solar 22:20, no day roll)', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      solarDate: { year: 1989, month: 9, day: 16 },
+      clockTime: { hour: 23, minute: 30 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('己巳 癸酉 己卯 乙亥');
+  });
+
+  it('China\'s first DST transition (1986-05-04 02:30 Asia/Shanghai) throws a spring-forward gap error', () => {
+    expect(() => {
+      calculateDualAxisBazi({
+        timezone: 'Asia/Shanghai',
+        longitude: 116.4074,
+        solarDate: { year: 1986, month: 5, day: 4 },
+        clockTime: { hour: 2, minute: 30 },
+        gender: 'male',
+      });
+    }).toThrow('spring-forward gap');
+  });
+
+  it('Kathmandu (UTC+5:45): 2024-06-15 12:00', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Asia/Kathmandu',
+      longitude: 85.32,
+      solarDate: { year: 2024, month: 6, day: 15 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('甲辰 庚午 庚戌 壬午');
+  });
+
+  it('St. John\'s, Newfoundland (UTC-3:30): 1980-01-15 12:00', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'America/St_Johns',
+      longitude: -52.71,
+      solarDate: { year: 1980, month: 1, day: 15 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'female',
+    });
+    expect(res.fourPillars).toBe('己未 丁丑 丁亥 丙午');
+  });
+
+  it('Sydney, Australia: 2000-01-01 15:00', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Australia/Sydney',
+      longitude: 151.2093,
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 15, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('己卯 丙子 戊午 己未');
+  });
+
+  it('Lichun 2025 bracket (LA, 2025-02-03): before the term boundary (05:00) stays in the prior year/month', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 2025, month: 2, day: 3 },
+      clockTime: { hour: 5, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('甲辰 丁丑 癸卯 甲寅');
+  });
+
+  it('Lichun 2025 bracket (LA, 2025-02-03): after the term boundary (07:00, same civil day) rolls year and month', () => {
+    // Lichun 2025 falls at 06:10:14 PST; 05:00 and 07:00 are on either side of it.
+    const res = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 2025, month: 2, day: 3 },
+      clockTime: { hour: 7, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('乙巳 戊寅 癸卯 乙卯');
+  });
+
+  it('Pre-1901 Shanghai LMT approximation: 1895-05-01 12:00 Asia/Shanghai', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 121.4737,
+      solarDate: { year: 1895, month: 5, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('乙未 庚辰 戊申 戊午');
+    expect(res.diagnostics.historicalTzApprox).toBe(true);
   });
 });

@@ -61,6 +61,12 @@ export const BaziInputSchema = z.object({
   data => !(data.clockTime && data.shichen),
   { message: 'Cannot provide both clockTime and shichen; please provide only one.' }
 ).refine(
+  data => !(data.clockTime && data.timeUnknown),
+  { message: 'Cannot provide both clockTime and timeUnknown; please provide only one.' }
+).refine(
+  data => !(data.shichen && data.timeUnknown),
+  { message: 'Cannot provide both shichen and timeUnknown; please provide only one.' }
+).refine(
   data => data.place || (data.longitude !== undefined && data.timezone),
   { message: 'Must provide place, or both longitude and timezone.' }
 );

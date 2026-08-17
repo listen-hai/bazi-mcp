@@ -110,12 +110,14 @@ export function lookupCity(query: string): CityEntry[] {
   const rawResults = exactMatches.length > 0 ? exactMatches : partialMatches;
   rawResults.sort((a, b) => (b.pop || 0) - (a.pop || 0));
 
-  // Deduplicate by city name and country
+  // Deduplicate by city name, country, and province — same-name cities within
+  // one country (e.g. Springfield, MO vs Springfield, IL) must stay distinct
+  // candidates rather than being silently collapsed into one.
   const seen = new Set<string>();
   const results: CityEntry[] = [];
 
   for (const r of rawResults) {
-    const key = `${r.city}|${r.country}`;
+    const key = `${r.city}|${r.country}|${r.province}`;
     if (!seen.has(key)) {
       seen.add(key);
       results.push(toCityEntry(r));
@@ -169,9 +171,17 @@ export function resolveLocation(input: {
     }
 
     if (candidates.length > 1) {
-      const topName = normalizeQuery(candidates[0].name);
       const queryNorm = normalizeQuery(input.place);
-      if (topName === queryNorm) {
+      // Only auto-pick when every exact-name candidate agrees on the IANA
+      // timezone (e.g. Tacoma has one match; Chengdu, Wuhan etc. resolve to a
+      // single entry). If they disagree — 'San Jose' (US/Costa Rica), 'London'
+      // (UK/Canada/US), 'Springfield' (multiple US states) — guessing one is
+      // exactly the silent-wrong-chart failure the candidate list exists to
+      // prevent, so fall through to the disambiguation error below.
+      const exactNameMatches = candidates.filter(c => normalizeQuery(c.name) === queryNorm);
+      const sameTimezone = exactNameMatches.length > 0 &&
+        exactNameMatches.every(c => c.timezone === exactNameMatches[0].timezone);
+      if (sameTimezone) {
         const city = candidates[0];
         return {
           longitude: input.longitude !== undefined ? input.longitude : city.longitude,

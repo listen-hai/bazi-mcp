@@ -132,7 +132,7 @@ describe('Global Multi-Region Bazi Tests', () => {
 
       it('Western US: Los Angeles, CA - Pacific Time', () => {
         const la = calculateDualAxisBazi({
-          place: 'Los Angeles',
+          place: 'Los Angeles, CA',
           solarDate: { year: 2024, month: 1, day: 15 },
           clockTime: { hour: 14, minute: 0 },
           gender: 'female',
@@ -175,7 +175,7 @@ describe('Global Multi-Region Bazi Tests', () => {
     describe('Europe & Eurasia', () => {
       it('London, UK - Prime Meridian 0° / GMT/BST', () => {
         const ldn = calculateDualAxisBazi({
-          place: 'London',
+          place: 'London, United Kingdom',
           solarDate: { year: 2024, month: 6, day: 21 },
           clockTime: { hour: 12, minute: 0 },
           gender: 'male',
@@ -294,7 +294,7 @@ describe('Global Multi-Region Bazi Tests', () => {
       it('Sydney, Australia - Southern Hemisphere DST UTC+11 vs winter UTC+10', () => {
         // DST in effect in Sydney in January (UTC+11)
         const sydSummer = calculateDualAxisBazi({
-          place: 'Sydney',
+          place: 'Sydney, Australia',
           solarDate: { year: 2024, month: 1, day: 10 },
           clockTime: { hour: 15, minute: 0 },
           gender: 'male',
@@ -303,7 +303,7 @@ describe('Global Multi-Region Bazi Tests', () => {
 
         // Winter standard time in Sydney in July (UTC+10)
         const sydWinter = calculateDualAxisBazi({
-          place: 'Sydney',
+          place: 'Sydney, Australia',
           solarDate: { year: 2024, month: 7, day: 10 },
           clockTime: { hour: 15, minute: 0 },
           gender: 'male',
@@ -313,7 +313,7 @@ describe('Global Multi-Region Bazi Tests', () => {
 
       it('Western Australia: Perth - UTC+8, no DST', () => {
         const perth = calculateDualAxisBazi({
-          place: 'Perth',
+          place: 'Perth, Australia',
           solarDate: { year: 2024, month: 1, day: 10 },
           clockTime: { hour: 12, minute: 0 },
           gender: 'female',

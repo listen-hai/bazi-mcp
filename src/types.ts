@@ -42,7 +42,9 @@ export interface DaYunCycleOutput {
   ganZhi: string;
   startYear: number;
   startAgeNominal: number; // nominal age (startAge + 1)
-  startAgeExact: number;   // exact age
+  // Whole years only (floor), not a precise age — see `startOffset` for the
+  // actual years/months/days/hours precision.
+  startAgeInWholeYears: number;
   endYear: number;
   endAgeNominal: number;
   stemTenGod: string;

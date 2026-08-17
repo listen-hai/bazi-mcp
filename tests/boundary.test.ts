@@ -42,6 +42,11 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     });
     expect(resFold0.diagnostics.utcInstant).toBe('1990-10-28T08:30:00.000Z');
     expect(resFold0.diagnostics.utcOffset).toContain('-07:00');
+    // The resolved dstFold must actually reach the Axis B pillar computation,
+    // not just the diagnostics block (FIX 1): fold 0's true solar time is
+    // 00:36 (子), fold 1's is 01:36 (丑) — one hour later, a different hour
+    // pillar, from a 丙 day (Five Rats: 丙/辛 day -> 戊子, 己丑, ...).
+    expect(resFold0.pillars.hour?.ganZhi).toBe('戊子');
 
     const resFold1 = calculateDualAxisBazi({
       timezone: 'America/Los_Angeles',
@@ -53,6 +58,40 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     });
     expect(resFold1.diagnostics.utcInstant).toBe('1990-10-28T09:30:00.000Z');
     expect(resFold1.diagnostics.utcOffset).toContain('-08:00');
+    expect(resFold1.pillars.hour?.ganZhi).toBe('己丑');
+  });
+
+  // docs/spec.md §6③'s own example: China's 1988 DST fall-back fold on home turf.
+  it('Should disambiguate a China DST fall-back fold (1988-09-11 01:30 Asia/Shanghai)', () => {
+    expect(() => {
+      calculateDualAxisBazi({
+        timezone: 'Asia/Shanghai',
+        longitude: 116.4074,
+        solarDate: { year: 1988, month: 9, day: 11 },
+        clockTime: { hour: 1, minute: 30 },
+        gender: 'male',
+      });
+    }).toThrow('DST fall-back overlap');
+
+    const fold0 = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      solarDate: { year: 1988, month: 9, day: 11 },
+      clockTime: { hour: 1, minute: 30 },
+      dstFold: 0,
+      gender: 'male',
+    });
+    const fold1 = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      solarDate: { year: 1988, month: 9, day: 11 },
+      clockTime: { hour: 1, minute: 30 },
+      dstFold: 1,
+      gender: 'male',
+    });
+    expect(fold0.pillars.hour?.ganZhi).toBe('甲子');
+    expect(fold1.pillars.hour?.ganZhi).toBe('乙丑');
+    expect(fold0.pillars.hour?.ganZhi).not.toBe(fold1.pillars.hour?.ganZhi);
   });
 
   // 4. Genuine leap lunar month support (2020 leap 4th month 15th -> day pillar 庚辰)
@@ -108,6 +147,21 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(res.diagnostics.warnings.some(w => w.includes('crosses a shichen boundary'))).toBe(true);
   });
 
+  // 丑 spans 01:00-02:59; its midpoint 02:00 falls in LA's 1990 spring-forward
+  // gap, but 01:00 existed that day, so this must return a chart with a gap
+  // warning instead of throwing (FIX 6).
+  it('Should fall back to a valid shichen sample point when the midpoint lands in a DST gap', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 1990, month: 4, day: 1 },
+      shichen: '丑',
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBeDefined();
+    expect(res.diagnostics.warnings.some(w => w.includes('spring-forward gap'))).toBe(true);
+  });
+
   // 8. Pre-1901 China historical timezone note
   it('Should add warning for pre-1901 China dates', () => {
     const res = calculateDualAxisBazi({
@@ -133,6 +187,19 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(() => {
       resolveLocation({ place: 'NonExistentCity999' });
     }).toThrow('Could not recognize birth place');
+  });
+
+  // Same-name cities within one country must not be collapsed into a single
+  // silent candidate (FIX 3a), and cross-country name collisions that disagree
+  // on timezone must not be silently auto-picked (FIX 3b).
+  it('Should surface all same-name candidates instead of silently guessing one', () => {
+    const springfields = lookupCity('Springfield');
+    expect(springfields.length).toBeGreaterThan(1);
+    expect(springfields.every(c => c.country === 'US')).toBe(true);
+
+    expect(() => {
+      resolveLocation({ place: 'San Jose' });
+    }).toThrow('matched multiple candidate cities');
   });
 
   // 10. Southern Hemisphere timezone and DST
@@ -258,6 +325,20 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
       solarDate: { year: 1988, month: 7, day: 1 },
       lunarDate: { year: 1988, month: 5, day: 18 },
       clockTime: { hour: 7, minute: 20 },
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      gender: 'male',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  // clockTime/shichen + timeUnknown must also be mutually exclusive (FIX 5a) —
+  // previously clockTime silently won and timeUnknown just nulled the hour pillar.
+  it('Should reject input carrying both clockTime and timeUnknown', () => {
+    const result = BaziInputSchema.safeParse({
+      solarDate: { year: 1988, month: 7, day: 1 },
+      clockTime: { hour: 14, minute: 10 },
+      timeUnknown: true,
       timezone: 'Asia/Shanghai',
       longitude: 116.4074,
       gender: 'male',

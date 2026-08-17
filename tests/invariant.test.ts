@@ -23,7 +23,7 @@ describe('8.2 Invariant Tests', () => {
 
     // 3. London (Europe/London, UTC+0): 2024-02-04 16:00
     const london = calculateDualAxisBazi({
-      place: 'London',
+      place: 'London, United Kingdom',
       solarDate: { year: 2024, month: 2, day: 4 },
       clockTime: { hour: 16, minute: 0 },
       gender: 'male',

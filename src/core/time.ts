@@ -143,7 +143,13 @@ export function wallToInstant(
     }
     const chosenInstant = candidates[dstFold === 1 ? 1 : 0];
     const offsetMinutes = tzOffsetMinutes(chosenInstant, tz);
-    const isDst = dstFold === 0;
+    // Compare against the standard (non-DST) offset rather than assuming
+    // fold 0 = DST: a fall-back overlap can also be a permanent offset change
+    // (e.g. Moscow 2014-10-26) with no DST involved at all.
+    const janOffset = tzOffsetMinutes(Date.UTC(wall.year, 0, 15, 12, 0), tz);
+    const julOffset = tzOffsetMinutes(Date.UTC(wall.year, 6, 15, 12, 0), tz);
+    const standardOffset = Math.min(janOffset, julOffset);
+    const isDst = offsetMinutes > standardOffset;
     return {
       instant: chosenInstant,
       offsetMinutes,
