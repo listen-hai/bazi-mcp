@@ -501,7 +501,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     engineInfo: {
       baziEngine: `@openfate/bazi-engine@${baziEnginePkg.version}`,
       trueSolarTimeEngine: `@openfate/true-solar-time@${trueSolarTimePkg.version}`,
-      schemaVersion: '1.0.0',
+      schemaVersion: '2.0.0',
     },
   };
 
