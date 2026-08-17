@@ -29,7 +29,7 @@ interface JsonRpcMessage {
  * test can assert nothing but JSON-RPC ever reached it.
  */
 class McpSession {
-  private proc: ReturnType<typeof Bun.spawn>;
+  private proc: Bun.Subprocess<'pipe', 'pipe', 'pipe'>;
   private pending = new Map<number, (msg: JsonRpcMessage) => void>();
   private buffer = '';
   private nextId = 1;
