@@ -1,4 +1,4 @@
-import tzlookup from '@photostructure/tz-lookup';
+import { find as findTimezones } from 'geo-tz';
 import cityTimezones, { CityTimezoneEntry } from 'city-timezones';
 import { CityEntry } from '../types';
 
@@ -17,29 +17,33 @@ function normalizeQuery(q: string): string {
 }
 
 /**
- * Converts a city-timezones entry to our CityEntry format,
- * using @photostructure/tz-lookup to ensure authoritative IANA timezone resolution.
+ * Converts a city-timezones entry to our CityEntry format, using geo-tz (real
+ * timezone-boundary polygons, 1970-era dataset) to ensure authoritative IANA
+ * timezone resolution. Coordinates that fall inside more than one timezone
+ * boundary (border overlaps, or genuine dual civil-time regions) yield more
+ * than one candidate; `alternateTimezones` carries the rest.
  *
+ * Picking the default among candidates is domain knowledge, not geography:
  * China has used a single civil time zone (Beijing time, Asia/Shanghai, UTC+8)
- * nationwide since 1949; birth records across the mainland are kept in it. So for
- * any CN city whose coordinate-derived zone isn't Asia/Shanghai (Xinjiang cities
- * genuinely sit in Asia/Urumqi; a couple of border cities get a neighbouring
- * country's zone from tz-lookup imprecision, e.g. Pingxiang/Guangxi -> Bangkok),
- * default `timezone` to Asia/Shanghai and record the geographic zone separately.
+ * nationwide since 1949 and mainland birth records use it, so when Asia/Shanghai
+ * is among the candidates for a CN city, it wins regardless of polygon order.
  */
 function toCityEntry(ct: CityTimezoneEntry): CityEntry {
-  let timezone = ct.timezone;
+  let candidates: string[];
   try {
-    timezone = tzlookup(ct.lat, ct.lng);
+    candidates = findTimezones(ct.lat, ct.lng);
   } catch {
-    // Fall back to city-timezones's own timezone value
+    candidates = [];
+  }
+  if (candidates.length === 0) {
+    candidates = [ct.timezone];
   }
 
-  let geographicTimezone: string | undefined;
-  if (ct.iso2 === 'CN' && timezone !== 'Asia/Shanghai') {
-    geographicTimezone = timezone;
-    timezone = 'Asia/Shanghai';
-  }
+  const timezone =
+    ct.iso2 === 'CN' && candidates.includes('Asia/Shanghai')
+      ? 'Asia/Shanghai'
+      : candidates[0];
+  const alternateTimezones = candidates.filter(tz => tz !== timezone);
 
   return {
     name: ct.city,
@@ -48,7 +52,7 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
     longitude: ct.lng,
     latitude: ct.lat,
     timezone,
-    geographicTimezone,
+    alternateTimezones: alternateTimezones.length > 0 ? alternateTimezones : undefined,
   };
 }
 
@@ -126,22 +130,7 @@ export interface ResolvedLocation {
   timezone: string;
   latitude?: number;
   placeName?: string;
-  warning?: string;
-  geographicTimezone?: string;
-}
-
-/**
- * Xinjiang is a genuine dual civil-time convention (unlike the Bangkok/Kolkata
- * border artifacts, which are silently corrected with no user-facing message):
- * some households keep 新疆当地时间 (UTC+6), two hours behind Beijing time.
- * Surface this as a warning + explicit override instruction rather than guessing.
- */
-function xinjiangOverrideNote(city: CityEntry): Pick<ResolvedLocation, 'warning' | 'geographicTimezone'> {
-  if (city.geographicTimezone !== 'Asia/Urumqi') return {};
-  return {
-    geographicTimezone: city.geographicTimezone,
-    warning: `出生地位于新疆，地理时区为 "Asia/Urumqi"，但已按中国大陆统一的北京时间（Asia/Shanghai, UTC+8）排盘。新疆部分家庭仍按新疆当地时间（UTC+6，比北京时间晚2小时）记录出生时刻；如确认应按新疆当地时间排盘，请显式传入 \`timezone: "Asia/Urumqi"\`。`,
-  };
+  alternateTimezones?: string[];
 }
 
 /**
@@ -188,7 +177,7 @@ export function resolveLocation(input: {
           timezone: input.timezone || city.timezone,
           latitude: city.latitude,
           placeName: `${city.name} (${city.country})`,
-          ...(input.timezone ? {} : xinjiangOverrideNote(city)),
+          alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
         };
       }
 
@@ -210,7 +199,7 @@ export function resolveLocation(input: {
       timezone: input.timezone || city.timezone,
       latitude: city.latitude,
       placeName: `${city.name} (${city.country})`,
-      ...(input.timezone ? {} : xinjiangOverrideNote(city)),
+      alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
     };
   }
 

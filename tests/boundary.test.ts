@@ -265,18 +265,21 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
     expect(result.success).toBe(false);
   });
 
-  // 12. 中国民用时区口径：新疆按北京时间排盘，并给出可选的地理时区提示
+  // 12. 中国民用时区口径：新疆按北京时间排盘，候选时区含 Asia/Urumqi，并给出2小时时差提示
+  // (date chosen outside China's 1986-1991 historical DST years, so the offset
+  // difference is the canonical 2 hours, not a DST-inflated one)
   it('Should default Urumqi (Xinjiang) to Beijing civil time with a 时区口径 diagnostic and warning', () => {
     const result = calculateDualAxisBazi({
       place: 'Urumqi',
-      solarDate: { year: 1990, month: 6, day: 15 },
+      solarDate: { year: 2000, month: 6, day: 15 },
       clockTime: { hour: 8, minute: 0 },
       gender: 'male',
     });
     expect(result.诊断.钟面).toContain('Asia/Shanghai');
     expect(result.诊断.时区口径).toEqual({
       使用: 'Asia/Shanghai',
-      地理时区: 'Asia/Urumqi',
+      候选时区: ['Asia/Urumqi'],
+      时差小时: 2,
       说明: expect.any(String),
     });
     expect(result.诊断.警告.some(w => w.includes('新疆当地时间'))).toBe(true);
@@ -286,20 +289,21 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   it('Should apply the same Urumqi civil-time policy via the lunarDate input path', () => {
     const result = calculateDualAxisBazi({
       place: 'Urumqi',
-      lunarDate: { year: 1990, month: 4, day: 23 },
+      lunarDate: { year: 2000, month: 5, day: 14 },
       clockTime: { hour: 8, minute: 0 },
       gender: 'male',
     });
     expect(result.诊断.钟面).toContain('Asia/Shanghai');
-    expect(result.诊断.时区口径?.地理时区).toBe('Asia/Urumqi');
+    expect(result.诊断.时区口径?.候选时区).toEqual(['Asia/Urumqi']);
     expect(result.诊断.警告.some(w => w.includes('新疆当地时间'))).toBe(true);
   });
 
-  // 14. 边界误差城市（Pingxiang/Guangxi 经纬度落入 tz-lookup 的 Asia/Bangkok）静默纠正，不询问用户
-  it('Should silently correct a CN border tz-lookup artifact (Pingxiang, Guangxi) with no ask-the-user warning', () => {
+  // 14. geo-tz 已在几何层面纠正了 Pingxiang/Guangxi 的边界误差（原先经由 tz-lookup 落入
+  // Asia/Bangkok，geo-tz 直接返回 Asia/Shanghai 单一候选）：无候选、无警告、无 时区口径
+  it('Should resolve Pingxiang, Guangxi cleanly to Asia/Shanghai with no warning and no 时区口径', () => {
     const result = calculateDualAxisBazi({
       place: 'Pingxiang, Guangxi',
-      solarDate: { year: 1990, month: 6, day: 15 },
+      solarDate: { year: 2000, month: 6, day: 15 },
       clockTime: { hour: 8, minute: 0 },
       gender: 'male',
     });
@@ -313,11 +317,25 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
     const result = calculateDualAxisBazi({
       place: 'Urumqi',
       timezone: 'Asia/Urumqi',
-      solarDate: { year: 1990, month: 6, day: 15 },
+      solarDate: { year: 2000, month: 6, day: 15 },
       clockTime: { hour: 8, minute: 0 },
       gender: 'male',
     });
     expect(result.诊断.钟面).toContain('Asia/Urumqi');
+    expect(result.诊断.时区口径).toBeUndefined();
+    expect(result.诊断.警告).toEqual([]);
+  });
+
+  // 16. 同偏移重叠（Guajara-Miram/BR: America/Porto_Velho 与 America/Puerto_Rico
+  // 在该瞬时同为 UTC-4）不是真正的歧义，不应产生任何警告或 时区口径
+  it('Should produce no warning for a same-UTC-offset timezone overlap (Guajara-Miram, BR)', () => {
+    const result = calculateDualAxisBazi({
+      place: 'Guajara-Miram',
+      solarDate: { year: 2000, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      gender: 'male',
+    });
+    expect(result.诊断.钟面).toContain('America/Porto_Velho');
     expect(result.诊断.时区口径).toBeUndefined();
     expect(result.诊断.警告).toEqual([]);
   });

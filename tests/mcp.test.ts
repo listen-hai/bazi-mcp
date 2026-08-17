@@ -125,10 +125,10 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
     expect(resultObj.count).toBeGreaterThan(0);
     expect(resultObj.results[0].name).toBe('Urumqi');
     // China civil-time policy: mainland places (incl. Xinjiang) report the
-    // civil zone (Beijing time) as `timezone`, with the geographic zone
+    // civil zone (Beijing time) as `timezone`, with the other geo-tz candidate
     // carried separately so callers can opt into it explicitly.
     expect(resultObj.results[0].timezone).toBe('Asia/Shanghai');
-    expect(resultObj.results[0].geographicTimezone).toBe('Asia/Urumqi');
+    expect(resultObj.results[0].alternateTimezones).toEqual(['Asia/Urumqi']);
   });
 
   it('Should return graceful error for invalid tool call arguments', async () => {

@@ -18,7 +18,3 @@ declare module 'city-timezones' {
   export function findFromIsoCode(isoCode: string): CityTimezoneEntry[];
   export const cityMapping: CityTimezoneEntry[];
 }
-
-declare module '@photostructure/tz-lookup' {
-  export default function tzlookup(latitude: number, longitude: number): string;
-}

@@ -114,9 +114,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     longitude: input.longitude,
     timezone: input.timezone,
   });
-  if (loc.warning) {
-    warnings.push(loc.warning);
-  }
 
   const dayBoundaryMode: DayBoundaryMode =
     input.sect === 2 ? 'ZI_HOUR_23' : 'MIDNIGHT_00';
@@ -248,6 +245,35 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     beijingWall = instantToWall(instant, 'Asia/Shanghai');
   } else {
     throw new Error('缺少日期信息：请提供 `solarDate` (公历) 或 `lunarDate` (农历)。');
+  }
+
+  // 3.5 Timezone ambiguity at the resolved instant: coordinates can fall inside
+  // more than one timezone boundary (border overlaps, or genuine dual civil-time
+  // regions like Xinjiang). Decide here, at the actual instant, not at geo lookup
+  // time — two zones sharing the same UTC offset at this instant (e.g. the
+  // Guajará-Mirim/Brazil overlap) is not a real ambiguity and gets no warning.
+  let tzAmbiguityDiag: DiagnosticsOutput['时区口径'] = undefined;
+  if (loc.alternateTimezones && loc.alternateTimezones.length > 0) {
+    const baseOffset = tzOffsetMinutes(instant, loc.timezone);
+    const genuineAlts = loc.alternateTimezones.filter(
+      alt => tzOffsetMinutes(instant, alt) !== baseOffset
+    );
+    if (genuineAlts.length > 0) {
+      const diffHours = Number(
+        (Math.max(...genuineAlts.map(alt => Math.abs(tzOffsetMinutes(instant, alt) - baseOffset))) / 60).toFixed(2)
+      );
+      let note = `出生地坐标同时落入多个时区边界：${[loc.timezone, ...genuineAlts].join('、')}；本次排盘采用 "${loc.timezone}"（与候选时区最大相差 ${diffHours} 小时）。如需改用其他时区排盘，请显式传入 \`timezone\` 参数。`;
+      if (loc.timezone === 'Asia/Shanghai' && genuineAlts.includes('Asia/Urumqi')) {
+        note += ' 出生地位于新疆：中国大陆自1949年起统一采用北京时间记录民事时间，但新疆部分家庭仍按新疆当地时间（UTC+6，比北京时间晚2小时）记录出生时刻；如确认应按当地时间排盘，请传入 `timezone: "Asia/Urumqi"`。';
+      }
+      tzAmbiguityDiag = {
+        使用: loc.timezone,
+        候选时区: genuineAlts,
+        时差小时: diffHours,
+        说明: note,
+      };
+      warnings.push(note);
+    }
   }
 
   // 4. Check historical Shanghai/China approximation (pre-1901)
@@ -428,11 +454,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       年龄基准: '虚岁',
     },
     时辰歧义: shichenAmbiguityDiag,
-    时区口径: loc.geographicTimezone ? {
-      使用: loc.timezone,
-      地理时区: loc.geographicTimezone,
-      说明: '出生地位于新疆，经纬度推算的地理时区与已采用的中国大陆统一民用时区（北京时间）不同；如需按新疆当地时间排盘，请显式传入 timezone: "Asia/Urumqi"。',
-    } : undefined,
+    时区口径: tzAmbiguityDiag,
     historicalTzApprox,
     警告: warnings,
     引擎信息: {

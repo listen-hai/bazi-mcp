@@ -13,6 +13,12 @@ async function build() {
     target: 'node',
     minify: true,
     naming: 'index.js',
+    // geo-tz reads its data files at runtime via fs.readSync from
+    // path.join(__dirname, '..', 'data'); bundling it would rebase __dirname
+    // to dist/ and break that read. Keep it external so the published
+    // dist/index.js resolves it from the consumer's node_modules instead
+    // (npm installs it because it's a declared dependency).
+    external: ['geo-tz'],
   });
 
   if (!result.success) {

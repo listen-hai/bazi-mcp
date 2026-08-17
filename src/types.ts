@@ -97,7 +97,8 @@ export interface DiagnosticsOutput {
   };
   时区口径?: {
     使用: string;
-    地理时区: string;
+    候选时区: string[];
+    时差小时: number;
     说明: string;
   };
   historicalTzApprox?: boolean;
@@ -136,5 +137,5 @@ export interface CityEntry {
   longitude: number;
   latitude: number;
   timezone: string;
-  geographicTimezone?: string;
+  alternateTimezones?: string[];
 }
