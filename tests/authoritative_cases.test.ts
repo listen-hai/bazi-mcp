@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 import { detectAllInteractions } from '../src/core/interactions';
+import { BaziInputSchema } from '../src/schemas/input';
 
 /**
  * Authoritative & Verified Real-World Benchmark Cases
@@ -354,7 +355,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     // Default sect=2: Day rolls to 甲戌, hour is 甲子 (甲日起甲子, 100% self-consistent)
     expect(res.fourPillars).toBe('甲辰 丁卯 甲戌 甲子');
     expect(res.diagnostics.convention.sect).toBe(2);
-    expect(res.diagnostics.convention.childLimitProvider).toBe('three_days_one_year');
+    expect(res.diagnostics.convention.childLimitProvider).toBe('three_days_one_year_shichen_quantized');
   });
 
   it('Explicit sect=1 on late-Zi hour emits explanatory warning', () => {
@@ -448,6 +449,22 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       gender: 'female',
     });
     expect(resLhasa.diagnostics.warnings.some(w => w.includes('Xinjiang'))).toBe(false);
+  });
+
+  it('R3: Strict schema validation rejects misspelled and extraneous properties', () => {
+    const validBase = {
+      place: 'Beijing',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male' as const,
+    };
+
+    expect(BaziInputSchema.safeParse({ ...validBase, sects: 1 }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...validBase, trueSolarTime: false }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...validBase, latitude: 39.9 }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...validBase, foo: 'bar' }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...validBase, solarDate: { year: 2000, month: 1, day: 1, extra: 123 } }).success).toBe(false);
+    expect(BaziInputSchema.safeParse(validBase).success).toBe(true);
   });
 });
 

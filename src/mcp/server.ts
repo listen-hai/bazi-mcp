@@ -48,6 +48,7 @@ export function createBaziMcpServer(): Server {
           solarDate: {
             type: 'object',
             description: 'Solar (Gregorian) birth date (mutually exclusive with lunarDate)',
+            additionalProperties: false,
             properties: {
               year: { type: 'integer', description: 'Year (e.g. 1990)' },
               month: { type: 'integer', description: 'Month (1-12)' },
@@ -58,6 +59,7 @@ export function createBaziMcpServer(): Server {
           lunarDate: {
             type: 'object',
             description: 'Lunar (Chinese calendar) birth date (mutually exclusive with solarDate)',
+            additionalProperties: false,
             properties: {
               year: { type: 'integer', description: 'Lunar year (e.g. 1990)' },
               month: { type: 'integer', description: 'Lunar month (1-12)' },
@@ -74,6 +76,7 @@ export function createBaziMcpServer(): Server {
           clockTime: {
             type: 'object',
             description: 'Clock time of birth (mutually exclusive with shichen and timeUnknown)',
+            additionalProperties: false,
             properties: {
               hour: { type: 'integer', description: 'Hour (0-23)' },
               minute: { type: 'integer', description: 'Minute (0-59)' },
@@ -112,6 +115,7 @@ export function createBaziMcpServer(): Server {
           },
         },
         required: ['gender'],
+        additionalProperties: false,
       },
     },
     {
@@ -126,6 +130,7 @@ export function createBaziMcpServer(): Server {
           },
         },
         required: ['query'],
+        additionalProperties: false,
       },
     },
   ];

@@ -9,20 +9,20 @@ export const SolarDateSchema = z.object({
   year: z.number().int().min(1700).max(2200).describe('Solar (Gregorian) year (1700-2200)'),
   month: z.number().int().min(1).max(12).describe('Solar (Gregorian) month (1-12)'),
   day: z.number().int().min(1).max(31).describe('Solar (Gregorian) day (1-31)'),
-});
+}).strict();
 
 export const LunarDateSchema = z.object({
   year: z.number().int().min(1700).max(2200).describe('Lunar year (1700-2200)'),
   month: z.number().int().min(1).max(12).describe('Lunar month (1-12)'),
   day: z.number().int().min(1).max(30).describe('Lunar day (1-30)'),
   isLeapMonth: z.boolean().optional().describe('Whether this is a leap month (e.g. pass true for a leap 4th month)'),
-});
+}).strict();
 
 export const ClockTimeSchema = z.object({
   hour: z.number().int().min(0).max(23).describe('Clock hour (0-23)'),
   minute: z.number().int().min(0).max(59).describe('Clock minute (0-59)'),
   second: z.number().int().min(0).max(59).optional().describe('Clock second (0-59)'),
-});
+}).strict();
 
 export const BaziInputSchema = z.object({
   // Birth location
@@ -47,7 +47,7 @@ export const BaziInputSchema = z.object({
   gender: z.enum(['male', 'female']).describe('Gender: male or female'),
   sect: z.union([z.literal(1), z.literal(2)]).optional().default(2).describe('Early/late Zi-hour convention: 2 (default, day rolls over at 23:00 / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or 1 (day rolls over at 00:00 / 子正换日)'),
   trueSolar: z.boolean().optional().default(true).describe('Whether to apply True Solar Time correction (default true)'),
-}).refine(
+}).strict().refine(
   data => data.solarDate || data.lunarDate,
   { message: 'Must provide either solarDate or lunarDate.' }
 ).refine(

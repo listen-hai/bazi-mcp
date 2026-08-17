@@ -299,19 +299,13 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     warnings.push('Historical timezone approximation: birth date precedes standard civil time zones. IANA tzdb models Local Mean Time (LMT) based on the zone\'s primary meridian, which may carry a minor regional offset before True Solar Time calculation.');
   }
 
-  const isXinjiang =
-    loc.province === 'Xinjiang' ||
-    loc.alternateTimezones?.includes('Asia/Urumqi') ||
-    (loc.timezone === 'Asia/Shanghai' &&
-      loc.longitude >= 73.5 &&
-      loc.longitude <= 96.4 &&
-      (loc.latitude ?? 40) >= 36.5 &&
-      (loc.latitude ?? 40) <= 49.2 &&
-      loc.province !== 'Tibet' &&
-      loc.province !== 'Gansu' &&
-      loc.province !== 'Qinghai');
-  if (isXinjiang && loc.timezone === 'Asia/Shanghai') {
-    warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
+  if (loc.timezone === 'Asia/Shanghai') {
+    const isResolvedXinjiang = loc.province?.includes('Xinjiang') || loc.alternateTimezones?.includes('Asia/Urumqi');
+    if (isResolvedXinjiang) {
+      warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
+    } else if (!input.place && loc.longitude >= 73.5 && loc.longitude <= 96.4 && (loc.latitude ?? 40) >= 36.5 && (loc.latitude ?? 40) <= 49.2) {
+      warnings.push('The coordinates fall in Western China (near Xinjiang border). While civil records standardise on Beijing Time (UTC+8), local oral records in Xinjiang may use Xinjiang Time (UTC+6). If the birth was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
+    }
   }
 
   // 5. Calculate Axis A (UTC Instant -> Beijing Wall Clock)
@@ -498,7 +492,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     convention: {
       sect,
       trueSolar: enableTrueSolar,
-      childLimitProvider: 'three_days_one_year',
+      childLimitProvider: 'three_days_one_year_shichen_quantized',
       ageBasis: 'nominal',
     },
     shichenAmbiguity: shichenAmbiguityDiag,
