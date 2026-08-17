@@ -37,7 +37,8 @@ class McpSession {
   nonJsonLines: string[] = [];
 
   constructor() {
-    this.proc = Bun.spawn(['node', ENTRY], {
+    const runtime = Bun.which('node') || process.execPath;
+    this.proc = Bun.spawn([runtime, ENTRY], {
       stdin: 'pipe',
       stdout: 'pipe',
       stderr: 'pipe',

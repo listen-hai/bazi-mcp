@@ -139,7 +139,9 @@ export interface ResolvedLocation {
  * Resolves location according to BaziInput contract:
  * - If explicit longitude AND timezone are provided, use them directly.
  * - If place is provided, look up coordinates and IANA timezone from global database.
- * - If place resolves to multiple candidates, disambiguates or reports candidates.
+ * - If same-name cities all share one timezone: auto-pick (no chart impact).
+ * - If same-name cities disagree on timezone: always throw with candidate list
+ *   so the calling agent can clarify with the user. Never silently guess.
  * - If place cannot be resolved, throws descriptive error.
  *
  * Note: latitude is not accepted as an input (docs/spec.md §5: latitude is
@@ -172,15 +174,11 @@ export function resolveLocation(input: {
 
     if (candidates.length > 1) {
       const queryNorm = normalizeQuery(input.place);
-      // Only auto-pick when every exact-name candidate agrees on the IANA
-      // timezone (e.g. Tacoma has one match; Chengdu, Wuhan etc. resolve to a
-      // single entry). If they disagree — 'San Jose' (US/Costa Rica), 'London'
-      // (UK/Canada/US), 'Springfield' (multiple US states) — guessing one is
-      // exactly the silent-wrong-chart failure the candidate list exists to
-      // prevent, so fall through to the disambiguation error below.
       const exactNameMatches = candidates.filter(c => normalizeQuery(c.name) === queryNorm);
       const sameTimezone = exactNameMatches.length > 0 &&
         exactNameMatches.every(c => c.timezone === exactNameMatches[0].timezone);
+
+      // All exact-name matches agree on timezone -> no chart impact, pick silently.
       if (sameTimezone) {
         const city = candidates[0];
         return {
@@ -192,6 +190,9 @@ export function resolveLocation(input: {
         };
       }
 
+      // Timezones disagree -> always refuse and list candidates.
+      // Getting the wrong timezone silently is catastrophic for a bazi chart.
+      // The calling AI agent can easily clarify with the user and retry.
       const listStr = candidates
         .slice(0, 5)
         .map(
@@ -200,7 +201,7 @@ export function resolveLocation(input: {
         )
         .join('\n');
       throw new Error(
-        `Place name "${input.place}" matched multiple candidate cities; please specify more precisely (e.g. "San Francisco, CA") or explicitly provide \`longitude\` and \`timezone\`:\n${listStr}`
+        `Place name "${input.place}" matched multiple candidate cities with different timezones; please specify more precisely (e.g. "Sydney, Australia") or explicitly provide \`longitude\` and \`timezone\`:\n${listStr}`
       );
     }
 

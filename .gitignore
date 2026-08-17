@@ -18,3 +18,6 @@ bun.lockb
 .env.local
 .vscode/
 .idea/
+
+# Internal design docs (not for public repo)
+docs/
