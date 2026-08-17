@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-111%20passed%2C%200%20failed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-114%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
 > 基于物理双时间轴天文学算法、全球离线地理数据库（7,329 个城市，227 个国家）与全量历史夏令时支持的高精度中国传统子平八字排盘 Model Context Protocol (MCP) 服务。
@@ -14,7 +14,7 @@
 
 ## 🌟 核心特性与架构设计
 
-`@lhk714/bazi-mcp` 为大语言模型客户端（Claude Desktop、Cursor、Antigravity、ChatGPT、DeepSeek 等）提供工业级、离线可用的八字排盘核心能力。
+`@lhk714/bazi-mcp` 为大语言模型客户端（Claude Desktop、Cursor、Antigravity、ChatGPT、DeepSeek 等）提供工业级、离线可用的八字排盘核心能力，支持 1800–2100 年代。
 
 ### 双时间轴（Dual-Axis）物理天文学架构
 
@@ -115,8 +115,8 @@ bazi-mcp
 | `place` | string | 可选 | 城市英文名称（如 `"Beijing"`、`"New York"`、`"Tacoma, WA"`、`"London, United Kingdom"`）。AI Agent 会自动翻译用户的任意语言输入。 |
 | `longitude` | number | 可选 | 出生地经度（东经为正，如 `102.8329`，西经为负，如 `-122.4443`。*跨日界线地点如 Chatham 群岛请在 [-180, 180] 范围内传值如 `-176.55`*）。 |
 | `timezone` | string | 可选 | 官方 IANA 时区名称（如 `"Asia/Shanghai"`、`"America/Los_Angeles"`） |
-| `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1993, "month": 7, "day": 14 }` |
-| `lunarDate` | object | 二选一* | 农历出生日期 `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }` |
+| `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1993, "month": 7, "day": 14 }`（支持范围：1800–2100） |
+| `lunarDate` | object | 二选一* | 农历出生日期 `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }`（支持范围：1800–2100） |
 | `lunarDateFrame` | string | 可选 | 农历时区基准：`"local"`（默认，按当地公历日对应农历）或 `"beijing"` |
 | `clockTime` | object | 三选一** | 钟表出生时刻 `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | 三选一** | 传统十二时辰分支（`'子'` 至 `'亥'`） |
@@ -142,7 +142,7 @@ bazi-mcp
 
 ---
 
-## 🧪 权威金标测试矩阵 (111 个用例 100% 全绿通过)
+## 🧪 权威金标测试矩阵 (114 个用例 100% 全绿通过)
 
 1. **Astro-Databank 权威医院出生证明 (AA级) 真实名人命例**：
    - 特朗普 (Donald Trump): `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`

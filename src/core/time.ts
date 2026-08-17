@@ -104,6 +104,16 @@ export function wallToInstant(
   tz: string,
   dstFold?: 0 | 1
 ): WallToInstantResult {
+  if (wall.month < 1 || wall.month > 12) {
+    throw new Error(`Invalid calendar month: ${wall.month} (must be between 1 and 12).`);
+  }
+  const daysInMonth = new Date(Date.UTC(wall.year, wall.month, 0)).getUTCDate();
+  if (wall.day < 1 || wall.day > daysInMonth) {
+    throw new Error(
+      `Invalid solar calendar date: ${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')} does not exist (${wall.year} month ${wall.month} has ${daysInMonth} days); please check the birth record.`
+    );
+  }
+
   const minute = wall.minute ?? 0;
   const second = wall.second ?? 0;
   const naive = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, minute, second);

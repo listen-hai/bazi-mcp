@@ -466,5 +466,92 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(BaziInputSchema.safeParse({ ...validBase, solarDate: { year: 2000, month: 1, day: 1, extra: 123 } }).success).toBe(false);
     expect(BaziInputSchema.safeParse(validBase).success).toBe(true);
   });
+
+  it('X1: LocationSource truthfulness and partial mixed input rejection', () => {
+    // 1. Place alone -> resolved
+    const res1 = calculateDualAxisBazi({
+      place: 'Beijing',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res1.diagnostics.locationSource).toBe('resolved');
+
+    // 2. Place + both explicit longitude & timezone -> caller_supplied with mixedWarning
+    const res2 = calculateDualAxisBazi({
+      place: 'Beijing',
+      longitude: -118.24,
+      timezone: 'America/Los_Angeles',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res2.diagnostics.locationSource).toBe('caller_supplied');
+    expect(res2.diagnostics.warnings.some(w => w.includes('explicit coordinates'))).toBe(true);
+
+    // 3. Place + only partial longitude without timezone -> rejected with clear error
+    expect(() =>
+      calculateDualAxisBazi({
+        place: 'Beijing',
+        longitude: -122.44,
+        solarDate: { year: 2000, month: 1, day: 1 },
+        clockTime: { hour: 12, minute: 0 },
+        gender: 'male',
+      })
+    ).toThrow('Inconsistent location input');
+
+    // 4. Excessive longitude offset (> 240 min) emits sanity warning
+    const resMismatchedTz = calculateDualAxisBazi({
+      place: 'Beijing',
+      timezone: 'America/Los_Angeles',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(resMismatchedTz.diagnostics.warnings.some(w => w.includes('Astronomical sanity warning'))).toBe(true);
+
+    const resSanity = calculateDualAxisBazi({
+      longitude: -122.44,
+      timezone: 'Asia/Shanghai',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(resSanity.diagnostics.warnings.some(w => w.includes('Astronomical sanity warning'))).toBe(true);
+  });
+
+  it('X2: Schema and engine year range boundary alignment (1800-2100)', () => {
+    const makePayload = (year: number) => ({
+      place: 'Beijing',
+      solarDate: { year, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male' as const,
+    });
+
+    expect(BaziInputSchema.safeParse(makePayload(1799)).success).toBe(false);
+    expect(BaziInputSchema.safeParse(makePayload(1800)).success).toBe(true);
+    expect(BaziInputSchema.safeParse(makePayload(2100)).success).toBe(true);
+    expect(BaziInputSchema.safeParse(makePayload(2101)).success).toBe(false);
+  });
+
+  it('X3: Invalid Gregorian calendar date validation', () => {
+    expect(() =>
+      calculateDualAxisBazi({
+        place: 'Beijing',
+        solarDate: { year: 1999, month: 2, day: 29 },
+        clockTime: { hour: 12, minute: 0 },
+        gender: 'male',
+      })
+    ).toThrow('Invalid solar calendar date: 1999-02-29 does not exist');
+
+    expect(() =>
+      calculateDualAxisBazi({
+        place: 'Beijing',
+        solarDate: { year: 1998, month: 2, day: 30 },
+        clockTime: { hour: 12, minute: 0 },
+        gender: 'male',
+      })
+    ).toThrow('Invalid solar calendar date: 1998-02-30 does not exist');
+  });
 });
 

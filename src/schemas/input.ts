@@ -6,13 +6,13 @@ export const ShichenEnum = z.enum([
 ]);
 
 export const SolarDateSchema = z.object({
-  year: z.number().int().min(1700).max(2200).describe('Solar (Gregorian) year (1700-2200)'),
+  year: z.number().int().min(1800).max(2100).describe('Solar (Gregorian) year (1800-2100)'),
   month: z.number().int().min(1).max(12).describe('Solar (Gregorian) month (1-12)'),
   day: z.number().int().min(1).max(31).describe('Solar (Gregorian) day (1-31)'),
 }).strict();
 
 export const LunarDateSchema = z.object({
-  year: z.number().int().min(1700).max(2200).describe('Lunar year (1700-2200)'),
+  year: z.number().int().min(1800).max(2100).describe('Lunar year (1800-2100)'),
   month: z.number().int().min(1).max(12).describe('Lunar month (1-12)'),
   day: z.number().int().min(1).max(30).describe('Lunar day (1-30)'),
   isLeapMonth: z.boolean().optional().describe('Whether this is a leap month (e.g. pass true for a leap 4th month)'),

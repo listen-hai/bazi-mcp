@@ -134,38 +134,54 @@ export interface ResolvedLocation {
   province?: string;
   placeName?: string;
   alternateTimezones?: string[];
+  locationSource: 'resolved' | 'caller_supplied';
+  mixedWarning?: string;
 }
 
 /**
  * Resolves location according to BaziInput contract:
- * - If explicit longitude AND timezone are provided, use them directly.
- * - If place is provided, look up coordinates and IANA timezone from global database.
+ * - If explicit longitude AND timezone are provided, use them directly (locationSource: 'caller_supplied').
+ * - If place is provided alone, look up coordinates and IANA timezone from global database (locationSource: 'resolved').
+ * - If place is provided alongside both longitude AND timezone, explicit values are used and a mixed warning is attached.
+ * - Partial mixing (place + only longitude, or place + only timezone) is strictly rejected to prevent geographical mismatches.
  * - If same-name cities all share one timezone: auto-pick (no chart impact).
- * - If same-name cities disagree on timezone: always throw with candidate list
- *   so the calling agent can clarify with the user. Never silently guess.
+ * - If same-name cities disagree on timezone: always throw with candidate list.
  * - If place cannot be resolved, throws descriptive error.
- *
- * Note: latitude is deliberately not accepted as an input — Axis A uses only
- * the timezone and Axis B only the longitude, so only longitude + timezone or
- * place are supported entry points.
  */
 export function resolveLocation(input: {
   place?: string;
   longitude?: number;
   timezone?: string;
 }): ResolvedLocation {
-  // 1. Explicit longitude + timezone provided
-  if (input.longitude !== undefined && input.timezone) {
+  const hasPlace = Boolean(input.place);
+  const hasLon = input.longitude !== undefined;
+  const hasTz = Boolean(input.timezone);
+
+  // 1. Both longitude + timezone provided (with or without place) -> caller_supplied
+  if (hasLon && hasTz) {
+    const mixedWarning = hasPlace
+      ? `Both \`place\` ("${input.place}") and explicit coordinates (\`longitude: ${input.longitude}\`, \`timezone: "${input.timezone}"\`) were provided; explicit values were used.`
+      : undefined;
+
     return {
-      longitude: input.longitude,
-      timezone: input.timezone,
+      longitude: input.longitude!,
+      timezone: input.timezone!,
       placeName: input.place,
+      locationSource: 'caller_supplied',
+      mixedWarning,
     };
   }
 
-  // 2. Place provided
-  if (input.place) {
-    const candidates = lookupCity(input.place);
+  // 2. Place provided with longitude only (missing timezone) -> Reject partial override
+  if (hasPlace && hasLon && !hasTz) {
+    throw new Error(
+      `Inconsistent location input: when overriding coordinates with \`longitude\` alongside \`place\` ("${input.place}"), \`timezone\` must also be explicitly provided.`
+    );
+  }
+
+  // 3. Place provided (with optional timezone override) -> resolved
+  if (hasPlace) {
+    const candidates = lookupCity(input.place!);
 
     if (candidates.length === 0) {
       throw new Error(
@@ -174,7 +190,7 @@ export function resolveLocation(input: {
     }
 
     if (candidates.length > 1) {
-      const queryNorm = normalizeQuery(input.place);
+      const queryNorm = normalizeQuery(input.place!);
       const exactNameMatches = candidates.filter(c => normalizeQuery(c.name) === queryNorm);
       const sameTimezone = exactNameMatches.length > 0 &&
         exactNameMatches.every(c => c.timezone === exactNameMatches[0].timezone);
@@ -183,12 +199,13 @@ export function resolveLocation(input: {
       if (sameTimezone) {
         const city = candidates[0];
         return {
-          longitude: input.longitude !== undefined ? input.longitude : city.longitude,
+          longitude: city.longitude,
           timezone: input.timezone || city.timezone,
           latitude: city.latitude,
           province: city.province,
           placeName: `${city.name} (${city.country})`,
           alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
+          locationSource: 'resolved',
         };
       }
 
@@ -209,27 +226,21 @@ export function resolveLocation(input: {
 
     const city = candidates[0];
     return {
-      longitude: input.longitude !== undefined ? input.longitude : city.longitude,
+      longitude: city.longitude,
       timezone: input.timezone || city.timezone,
       latitude: city.latitude,
       province: city.province,
       placeName: `${city.name} (${city.country})`,
       alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
+      locationSource: 'resolved',
     };
   }
 
-  // 3. Only longitude provided without timezone
-  if (input.longitude !== undefined) {
-    if (!input.timezone) {
-      throw new Error(
-        `Longitude (${input.longitude}) was provided but \`timezone\` (IANA timezone name) or \`place\` is missing. Rounding longitude to infer a timezone is strictly forbidden; please explicitly specify \`timezone\`.`
-      );
-    }
-
-    return {
-      longitude: input.longitude,
-      timezone: input.timezone,
-    };
+  // 4. Incomplete longitude without timezone
+  if (hasLon && !hasTz) {
+    throw new Error(
+      `Longitude (${input.longitude}) was provided but \`timezone\` (IANA timezone name) is missing. Rounding longitude to infer a timezone is strictly forbidden; please explicitly specify \`timezone\`.`
+    );
   }
 
   throw new Error(

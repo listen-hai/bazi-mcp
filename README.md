@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-111%20passed%2C%200%20failed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-114%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
 > Deterministic, high-precision Four Pillars of Destiny (八字排盘) Model Context Protocol (MCP) server powered by a physical dual-axis astronomical time engine and global geographic database (7,329 cities across 227 countries).
@@ -14,7 +14,7 @@
 
 ## 🌟 Overview
 
-`@lhk714/bazi-mcp` provides a production-grade, offline-first MCP server for Large Language Models (Claude, Cursor, Antigravity, ChatGPT, DeepSeek) to perform rigorous Chinese Four Pillars of Destiny (八字) calculations for anyone, anywhere on Earth, across any era.
+`@lhk714/bazi-mcp` provides a production-grade, offline-first MCP server for Large Language Models (Claude, Cursor, Antigravity, ChatGPT, DeepSeek) to perform rigorous Chinese Four Pillars of Destiny (八字) calculations for anyone, anywhere on Earth, across 1800–2100.
 
 It is published on the NPM registry and can be run instantly without manual installation or local compilation.
 
@@ -106,8 +106,8 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"Lagos"`, `"London, United Kingdom"`). AI agents automatically translate any user language. |
 | `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`). *Note for Date Line locations (e.g. Chatham Islands): express longitude in [-180, 180] (e.g. `-176.55` in `UTC+12:45`), normalized against the standard time meridian.* |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
-| `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` |
-| `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }` |
+| `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` (supported: 1800–2100) |
+| `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }` (supported: 1800–2100) |
 | `lunarDateFrame` | string | Optional | `"local"` (default) or `"beijing"` |
 | `clockTime` | object | Optional** | Local wall clock time `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | Optional** | Traditional Chinese two-hour branch (`'子'` to `'亥'`) |
@@ -135,7 +135,7 @@ Resolves city names to coordinates, administrative regions, and official IANA ti
 
 ## 🧪 Verification & Benchmark Matrix
 
-`@lhk714/bazi-mcp` is verified against 111 rigorous test cases (100% passing):
+`@lhk714/bazi-mcp` is verified against 114 rigorous test cases (100% passing):
 
 1. **Astro-Databank Rodden Rating AA Hospital Birth Certificates**:
    - **Donald Trump**: `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`

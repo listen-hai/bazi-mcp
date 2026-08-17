@@ -86,6 +86,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     longitude: input.longitude,
     timezone: input.timezone,
   });
+  if (loc.mixedWarning) {
+    warnings.push(loc.mixedWarning);
+  }
 
   const sect = input.sect ?? 2;
   const dayBoundaryMode: DayBoundaryMode =
@@ -371,6 +374,12 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     { longitude: loc.longitude }
   );
 
+  if (Math.abs(solarTimeDetail.longitudeCorrectionMinutes) > 240) {
+    warnings.push(
+      `Astronomical sanity warning: longitude correction (${solarTimeDetail.longitudeCorrectionMinutes.toFixed(1)} min) exceeds ±240 minutes relative to the timezone standard meridian (${loc.timezone}). Please verify that the specified longitude and timezone belong to the same geographic region.`
+    );
+  }
+
   // 7. Shichen Ambiguity Check (if shichen was passed)
   let shichenAmbiguityDiag: DiagnosticsOutput['shichenAmbiguity'] = undefined;
   if (input.shichen && !input.clockTime && !input.timeUnknown) {
@@ -498,7 +507,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     shichenAmbiguity: shichenAmbiguityDiag,
     timezoneResolution: tzAmbiguityDiag,
     historicalTzApprox,
-    locationSource: input.place ? 'resolved' : 'caller_supplied',
+    locationSource: loc.locationSource,
     warnings,
     engineInfo: {
       baziEngine: `@openfate/bazi-engine@${baziEnginePkg.version}`,
