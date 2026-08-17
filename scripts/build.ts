@@ -22,10 +22,12 @@ async function build() {
 
   const distPath = resolve(outDir, 'index.js');
   let content = readFileSync(distPath, 'utf8');
-  if (!content.startsWith('#!/usr/bin/env node')) {
-    content = '#!/usr/bin/env node\n' + content;
-    writeFileSync(distPath, content, 'utf8');
-  }
+
+  // Strip any existing shebangs produced by bundler
+  content = content.replace(/^(#!.*\n)+/, '');
+  // Add clean single node shebang
+  content = '#!/usr/bin/env node\n' + content;
+  writeFileSync(distPath, content, 'utf8');
 
   try {
     chmodSync(distPath, 0o755);
