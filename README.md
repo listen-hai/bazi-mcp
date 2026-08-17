@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-106%20passed%2C%200%20failed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-110%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
 > Deterministic, high-precision Four Pillars of Destiny (八字排盘) Model Context Protocol (MCP) server powered by a physical dual-axis astronomical time engine and global geographic database (7,329 cities across 227 countries).
@@ -66,16 +66,11 @@ bazi-mcp
 
 ---
 
-## 🔌 MCP Client Configuration
+## ⚙️ MCP Client Configuration
 
-Add `@lhk714/bazi-mcp` to your MCP client configuration file (e.g., `claude_desktop_config.json`, Cursor Settings, or Antigravity):
+Add `@lhk714/bazi-mcp` to your MCP client config (e.g. Claude Desktop, Cursor, Cline, Roo Code, Antigravity):
 
-### 1. Claude Desktop Configuration
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-#### Using Bun (`bunx` - Recommended for speed):
+#### Using Bun (`bunx`):
 ```json
 {
   "mcpServers": {
@@ -109,7 +104,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"Lagos"`, `"London, United Kingdom"`). AI agents automatically translate any user language. |
-| `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`) |
+| `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`). *Note for Date Line locations (e.g. Chatham Islands): express longitude in [-180, 180] (e.g. `-176.55` in `UTC+12:45`), normalized against the standard time meridian.* |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
 | `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` |
 | `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }` |
@@ -119,11 +114,13 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | `timeUnknown` | boolean | Optional** | Set `true` for a 3-pillar chart |
 | `dstFold` | number | Optional | `0` (DST) or `1` (Standard) for ambiguous fall-back overlap hours |
 | `gender` | string | **Required** | `"male"` (乾造) or `"female"` (坤造) |
-| `sect` | number | Optional | `1` (default, 00:00 midnight day rollover) or `2` (23:00 Zi-hour rollover) |
+| `sect` | number | Optional | `2` (default, 23:00 Zi-hour rollover / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or `1` (00:00 midnight day rollover / 子正换日) |
 | `trueSolar` | boolean | Optional | `true` (default) for astronomical True Solar Time correction |
 
 *\* Provide either `solarDate` or `lunarDate`.*  
 *\*\* Provide either `clockTime`, `shichen`, or `timeUnknown: true`.*
+
+`diagnostics.locationSource` reports whether the location was `"resolved"` from the global city database or `"caller_supplied"`.
 
 ---
 
@@ -138,7 +135,7 @@ Resolves city names to coordinates, administrative regions, and official IANA ti
 
 ## 🧪 Verification & Benchmark Matrix
 
-`@lhk714/bazi-mcp` is verified against 106 rigorous test cases (100% passing):
+`@lhk714/bazi-mcp` is verified against 110 rigorous test cases (100% passing):
 
 1. **Astro-Databank Rodden Rating AA Hospital Birth Certificates**:
    - **Donald Trump**: `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`

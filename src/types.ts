@@ -104,6 +104,7 @@ export interface DiagnosticsOutput {
     note: string;
   };
   historicalTzApprox?: boolean;
+  locationSource?: 'resolved' | 'caller_supplied';
   warnings: string[];
   engineInfo: {
     baziEngine: string;

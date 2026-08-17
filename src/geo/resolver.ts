@@ -131,6 +131,7 @@ export interface ResolvedLocation {
   longitude: number;
   timezone: string;
   latitude?: number;
+  province?: string;
   placeName?: string;
   alternateTimezones?: string[];
 }
@@ -185,6 +186,7 @@ export function resolveLocation(input: {
           longitude: input.longitude !== undefined ? input.longitude : city.longitude,
           timezone: input.timezone || city.timezone,
           latitude: city.latitude,
+          province: city.province,
           placeName: `${city.name} (${city.country})`,
           alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
         };
@@ -210,6 +212,7 @@ export function resolveLocation(input: {
       longitude: input.longitude !== undefined ? input.longitude : city.longitude,
       timezone: input.timezone || city.timezone,
       latitude: city.latitude,
+      province: city.province,
       placeName: `${city.name} (${city.country})`,
       alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
     };

@@ -391,5 +391,63 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.diagnostics.historicalTzApprox).toBe(true);
     expect(res.daYun.startDate).toContain('(Asia/Shanghai)');
   });
+
+  it('N1: Historical mid-year base offset shift (Europe/Moscow 1922-11-09 23:00)', () => {
+    // Moscow transitioned base offset from +3 to +2 on 1922-10-01.
+    // Probing instant ±6 months preserves exact UTC+2 offset and rolls to 壬午 庚子.
+    const res = calculateDualAxisBazi({
+      timezone: 'Europe/Moscow',
+      longitude: 37.6173,
+      solarDate: { year: 1922, month: 11, day: 9 },
+      clockTime: { hour: 23, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('壬戌 辛亥 壬午 庚子');
+    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('23:46:37');
+  });
+
+  it('N1: US War Time boundary (America/Phoenix 1944-02-04 04:09)', () => {
+    // 1944 War Time boundary: correctly resolves to MST (UTC-7) and produces 寅 hour.
+    const res = calculateDualAxisBazi({
+      timezone: 'America/Phoenix',
+      longitude: -112.074,
+      solarDate: { year: 1944, month: 2, day: 4 },
+      clockTime: { hour: 4, minute: 9 },
+      gender: 'male',
+    });
+    expect(res.fourPillars).toBe('癸未 乙丑 戊戌 甲寅');
+    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('03:26:43');
+  });
+
+  it('N4 & N6: Sub-minute LMT offset and locationSource reporting', () => {
+    const resResolved = calculateDualAxisBazi({
+      place: 'Beijing',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(resResolved.diagnostics.locationSource).toBe('resolved');
+
+    const resSupplied = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 113.2644,
+      solarDate: { year: 1897, month: 6, day: 11 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(resSupplied.diagnostics.locationSource).toBe('caller_supplied');
+    expect(resSupplied.diagnostics.utcOffset).toBe('+08:05:43');
+    expect(resSupplied.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('11:27:57');
+  });
+
+  it('N5: No Xinjiang warning false positives for Tibet or Gansu', () => {
+    const resLhasa = calculateDualAxisBazi({
+      place: 'Lhasa',
+      solarDate: { year: 1990, month: 5, day: 20 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'female',
+    });
+    expect(resLhasa.diagnostics.warnings.some(w => w.includes('Xinjiang'))).toBe(false);
+  });
 });
 

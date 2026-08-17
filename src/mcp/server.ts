@@ -110,10 +110,6 @@ export function createBaziMcpServer(): Server {
             type: 'boolean',
             description: 'Whether to apply True Solar Time correction (default: true)',
           },
-          childLimitProvider: {
-            type: 'string',
-            description: 'Da Yun onset calculation method (default: "three_days_one_year")',
-          },
         },
         required: ['gender'],
       },

@@ -34,10 +34,26 @@ export function tzOffsetMs(instantMs: number, tz: string): number {
 }
 
 /**
- * Returns the UTC offset in minutes for a given instant in an IANA timezone.
+ * Returns the UTC offset in minutes (exact floating-point) for a given instant in an IANA timezone.
+ * Preserves sub-minute historical Local Mean Time (LMT) precision without rounding truncation.
  */
 export function tzOffsetMinutes(instantMs: number, tz: string): number {
-  return Math.round(tzOffsetMs(instantMs, tz) / 60000);
+  return tzOffsetMs(instantMs, tz) / 60000;
+}
+
+/**
+ * Returns the standard (non-DST) offset in minutes around a given instant by sampling
+ * 13 monthly points (±6 months) around the instant.
+ * This guarantees immunity to mid-year base timezone changes (e.g. Moscow 1922, Phoenix 1944 War Time).
+ */
+export function getStandardOffsetMinutes(instantMs: number, tz: string): number {
+  let minOffset = tzOffsetMs(instantMs, tz) / 60000;
+  for (let i = -6; i <= 6; i++) {
+    const sampleMs = instantMs + i * 30 * 86400000;
+    const off = tzOffsetMs(sampleMs, tz) / 60000;
+    if (off < minOffset) minOffset = off;
+  }
+  return minOffset;
 }
 
 /**
@@ -143,12 +159,7 @@ export function wallToInstant(
     }
     const chosenInstant = candidates[dstFold === 1 ? 1 : 0];
     const offsetMinutes = tzOffsetMinutes(chosenInstant, tz);
-    // Compare against the standard (non-DST) offset rather than assuming
-    // fold 0 = DST: a fall-back overlap can also be a permanent offset change
-    // (e.g. Moscow 2014-10-26) with no DST involved at all.
-    const janOffset = tzOffsetMinutes(Date.UTC(wall.year, 0, 15, 12, 0), tz);
-    const julOffset = tzOffsetMinutes(Date.UTC(wall.year, 6, 15, 12, 0), tz);
-    const standardOffset = Math.min(janOffset, julOffset);
+    const standardOffset = getStandardOffsetMinutes(chosenInstant, tz);
     const isDst = offsetMinutes > standardOffset;
     return {
       instant: chosenInstant,
@@ -161,11 +172,7 @@ export function wallToInstant(
   // 3. Normal single instant
   const instant = candidates[0];
   const offsetMinutes = tzOffsetMinutes(instant, tz);
-
-  // Determine whether DST is active by comparing offset with winter offset (Jan 1) or summer offset (Jul 1)
-  const janOffset = tzOffsetMinutes(Date.UTC(wall.year, 0, 15, 12, 0), tz);
-  const julOffset = tzOffsetMinutes(Date.UTC(wall.year, 6, 15, 12, 0), tz);
-  const standardOffset = Math.min(janOffset, julOffset);
+  const standardOffset = getStandardOffsetMinutes(instant, tz);
   const isDst = offsetMinutes > standardOffset;
 
   return {
@@ -176,13 +183,16 @@ export function wallToInstant(
 }
 
 /**
- * Formats offset in minutes to string like "+08:00", "-07:00 (DST in effect)"
+ * Formats offset in minutes to string like "+08:00", "+08:05:43", "-07:00 (DST in effect)"
  */
 export function formatOffsetString(offsetMinutes: number, isDst: boolean): string {
   const sign = offsetMinutes >= 0 ? '+' : '-';
   const abs = Math.abs(offsetMinutes);
-  const h = String(Math.floor(abs / 60)).padStart(2, '0');
-  const m = String(abs % 60).padStart(2, '0');
-  const base = `${sign}${h}:${m}`;
+  const totalSeconds = Math.round(abs * 60);
+  const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const s = totalSeconds % 60;
+  const base = s > 0 ? `${sign}${h}:${m}:${String(s).padStart(2, '0')}` : `${sign}${h}:${m}`;
   return isDst ? `${base} (DST in effect)` : base;
 }
+

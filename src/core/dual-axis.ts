@@ -7,7 +7,7 @@ import {
   Pillar,
   HiddenStemInfo,
 } from '@openfate/bazi-engine';
-import { getTrueSolarTimeFromInstant } from '@openfate/true-solar-time';
+import { calculateTrueSolarTime } from '@openfate/true-solar-time';
 import baziEnginePkg from '@openfate/bazi-engine/package.json';
 import trueSolarTimePkg from '@openfate/true-solar-time/package.json';
 import { detectAllInteractions } from './interactions';
@@ -22,6 +22,7 @@ import {
 } from '../types';
 import {
   tzOffsetMinutes,
+  getStandardOffsetMinutes,
   wallToInstant,
   instantToWall,
   toUTCWall,
@@ -298,7 +299,18 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     warnings.push('Historical timezone approximation: birth date precedes standard civil time zones. IANA tzdb models Local Mean Time (LMT) based on the zone\'s primary meridian, which may carry a minor regional offset before True Solar Time calculation.');
   }
 
-  if (loc.timezone === 'Asia/Shanghai' && (loc.alternateTimezones?.includes('Asia/Urumqi') || (loc.longitude < 96.5 && (loc.latitude ?? 40) > 34))) {
+  const isXinjiang =
+    loc.province === 'Xinjiang' ||
+    loc.alternateTimezones?.includes('Asia/Urumqi') ||
+    (loc.timezone === 'Asia/Shanghai' &&
+      loc.longitude >= 73.5 &&
+      loc.longitude <= 96.4 &&
+      (loc.latitude ?? 40) >= 36.5 &&
+      (loc.latitude ?? 40) <= 49.2 &&
+      loc.province !== 'Tibet' &&
+      loc.province !== 'Gansu' &&
+      loc.province !== 'Qinghai');
+  if (isXinjiang && loc.timezone === 'Asia/Shanghai') {
     warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
   }
 
@@ -322,35 +334,46 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   // Calculates True Solar Time; determines Day Pillar and Hour Pillar
   const enableTrueSolar = input.trueSolar !== false;
 
-  // The engine re-derives its own UTC instant from wall+timezoneId internally
-  // and silently takes the first DST fall-back fold, discarding whichever
-  // fold `dstFold` resolved. So when the wall clock was ambiguous
-  // (foldOffsetMinutes given), pass the already-resolved numeric
-  // fractional-hour offset instead of timezoneId; otherwise keep timezoneId
-  // so pre-1901 sub-minute LMT offsets (e.g. Shanghai +08:05:43) stay exact
-  // (FIX 1). One helper for both call sites (main chart + shichen sampling
-  // below) so the fix can't drift between them (FIX 4).
-  const axisBChart = (wall: { year: number; month: number; day: number; hour: number; minute: number }, foldOffsetMinutes?: number) =>
+  // Resolve standard (non-DST) offset for the birth instant by 13-point sampling.
+  // This avoids upstream base meridian misattribution during historical base offset shifts (e.g. Moscow 1922, US War Time 1944).
+  const standardOffsetMinutes = getStandardOffsetMinutes(instant, loc.timezone);
+  const standardOffsetHours = standardOffsetMinutes / 60;
+  const dstOffsetHours = isDst ? (offsetMinutes - standardOffsetMinutes) / 60 : 0;
+
+  // Standard wall clock corresponds to civil wall time with DST offset removed
+  const standardWall = toUTCWall(instant + standardOffsetMinutes * 60000);
+
+  const axisBChart = (
+    w: { year: number; month: number; day: number; hour: number; minute: number; second?: number },
+    tzOffsetHours: number
+  ) =>
     calculateBaziChart({
-      year: wall.year,
-      month: wall.month,
-      day: wall.day,
-      hour: wall.hour,
-      minute: wall.minute,
+      year: w.year,
+      month: w.month,
+      day: w.day,
+      hour: w.hour,
+      minute: w.minute,
       gender: input.gender,
       longitude: loc.longitude,
-      ...(foldOffsetMinutes !== undefined
-        ? { timezone: foldOffsetMinutes / 60 }
-        : { timezoneId: loc.timezone }),
+      timezone: tzOffsetHours,
       enableTrueSolarTime: enableTrueSolar,
       dayBoundaryMode,
     });
 
-  const B = axisBChart(localWall, localFoldOffsetMinutes);
+  const B = axisBChart(standardWall, standardOffsetHours);
 
-  // Extract Solar Time details via @openfate/true-solar-time from instant directly
-  const solarTimeDetail = getTrueSolarTimeFromInstant(
-    { date: new Date(instant), timeZoneId: loc.timezone },
+  // Extract Solar Time details via @openfate/true-solar-time using standard offset + DST offset
+  const solarTimeDetail = calculateTrueSolarTime(
+    {
+      year: localWall.year,
+      month: localWall.month,
+      day: localWall.day,
+      hour: localWall.hour,
+      minute: localWall.minute,
+      second: localWall.second ?? 0,
+      timeZoneOffset: standardOffsetHours,
+      dstOffset: dstOffsetHours,
+    },
     { longitude: loc.longitude }
   );
 
@@ -376,10 +399,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
           input.dstFold
         );
 
-        const sampleB = axisBChart(
-          { year: localWall.year, month: localWall.month, day: localWall.day, hour: pt.hour, minute: pt.minute },
-          sampleWRes.candidates ? sampleWRes.offsetMinutes : undefined
-        );
+        const sampleStdOffsetMinutes = getStandardOffsetMinutes(sampleWRes.instant, loc.timezone);
+        const sampleStdWall = toUTCWall(sampleWRes.instant + sampleStdOffsetMinutes * 60000);
+        const sampleB = axisBChart(sampleStdWall, sampleStdOffsetMinutes / 60);
 
         if (sampleB.pillars.hour) {
           candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
@@ -476,12 +498,13 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     convention: {
       sect,
       trueSolar: enableTrueSolar,
-      childLimitProvider: input.childLimitProvider || 'three_days_one_year',
+      childLimitProvider: 'three_days_one_year',
       ageBasis: 'nominal',
     },
     shichenAmbiguity: shichenAmbiguityDiag,
     timezoneResolution: tzAmbiguityDiag,
     historicalTzApprox,
+    locationSource: input.place ? 'resolved' : 'caller_supplied',
     warnings,
     engineInfo: {
       baziEngine: `@openfate/bazi-engine@${baziEnginePkg.version}`,

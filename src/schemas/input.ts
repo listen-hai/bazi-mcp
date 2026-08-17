@@ -47,7 +47,6 @@ export const BaziInputSchema = z.object({
   gender: z.enum(['male', 'female']).describe('Gender: male or female'),
   sect: z.union([z.literal(1), z.literal(2)]).optional().default(2).describe('Early/late Zi-hour convention: 2 (default, day rolls over at 23:00 / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or 1 (day rolls over at 00:00 / 子正换日)'),
   trueSolar: z.boolean().optional().default(true).describe('Whether to apply True Solar Time correction (default true)'),
-  childLimitProvider: z.string().optional().default('three_days_one_year').describe('Da Yun (luck pillar) onset calculation convention (default three_days_one_year)'),
 }).refine(
   data => data.solarDate || data.lunarDate,
   { message: 'Must provide either solarDate or lunarDate.' }
