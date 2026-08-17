@@ -14,7 +14,7 @@ export function createBaziMcpServer(): Server {
   const server = new Server(
     {
       name: 'bazi-mcp',
-      version: '1.0.2',
+      version: '1.0.3',
     },
     {
       capabilities: {
