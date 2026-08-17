@@ -1,17 +1,16 @@
 import {
   calculateBaziChart,
   calculateTenGod,
-  detectInteractions,
   getMainQi,
   BaziChart,
   DayBoundaryMode,
   Pillar,
   HiddenStemInfo,
-  BranchInteraction
 } from '@openfate/bazi-engine';
 import { getTrueSolarTimeFromInstant } from '@openfate/true-solar-time';
 import baziEnginePkg from '@openfate/bazi-engine/package.json';
 import trueSolarTimePkg from '@openfate/true-solar-time/package.json';
+import { detectAllInteractions } from './interactions';
 import {
   BaziInput,
   BaziCalculationResult,
@@ -75,31 +74,6 @@ function formatPillar(
 }
 
 /**
- * Deduplicates branch interactions.
- */
-function deduplicateInteractions(interactions: BranchInteraction[]): BranchInteractionOutput[] {
-  const seen = new Set<string>();
-  const results: BranchInteractionOutput[] = [];
-
-  for (const item of interactions) {
-    const sortedBranches = [...item.branches].sort().join('-');
-    const key = `${item.type}:${sortedBranches}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      results.push({
-        type: item.type,
-        branches: item.branches,
-        pillars: item.pillars,
-        resultElement: item.resultElement,
-        description: item.description,
-      });
-    }
-  }
-
-  return results;
-}
-
-/**
  * The core dual-axis calculation engine.
  */
 export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
@@ -112,8 +86,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     timezone: input.timezone,
   });
 
+  const sect = input.sect ?? 2;
   const dayBoundaryMode: DayBoundaryMode =
-    input.sect === 2 ? 'ZI_HOUR_23' : 'MIDNIGHT_00';
+    sect === 1 ? 'MIDNIGHT_00' : 'ZI_HOUR_23';
 
   // 2. Resolve Date & Time inputs
   let localWall: WallDateTime;
@@ -144,6 +119,10 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   } else {
     // If no time is given and timeUnknown not explicitly set, throw error
     throw new Error('Missing time information: please provide `clockTime` (clock time), `shichen` (traditional double-hour), or set `timeUnknown: true` (3-pillar chart).');
+  }
+
+  if (sect === 1 && baseHour === 23) {
+    warnings.push('Late Zi hour (夜子时 23:00-23:59) with sect=1 (midnight rollover): day pillar remains the calendar day while hour stem follows the next day\'s rat-chasing formula (五鼠遁).');
   }
 
   // Resolves a local wall clock to a UTC instant. If the wall clock was built
@@ -309,11 +288,18 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     }
   }
 
-  // 4. Check historical Shanghai/China approximation (pre-1901)
+  // 4. Check historical LMT / standard time approximation and regional nuances
   let historicalTzApprox = false;
   if (loc.timezone === 'Asia/Shanghai' && instant < Date.UTC(1901, 0, 1)) {
     historicalTzApprox = true;
     warnings.push('Before 1901, localities across China used Local Mean Time (Shanghai LMT was UTC+08:06); Beijing, Guangzhou, and other cities have a systematic offset of a few minutes.');
+  } else if (Math.abs(offsetMinutes % 15) > 0.001 || (instant < Date.UTC(1890, 0, 1) && !isDst)) {
+    historicalTzApprox = true;
+    warnings.push('Historical timezone approximation: birth date precedes standard civil time zones. IANA tzdb models Local Mean Time (LMT) based on the zone\'s primary meridian, which may carry a minor regional offset before True Solar Time calculation.');
+  }
+
+  if (loc.timezone === 'Asia/Shanghai' && (loc.alternateTimezones?.includes('Asia/Urumqi') || (loc.longitude < 96.5 && (loc.latitude ?? 40) > 34))) {
+    warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
   }
 
   // 5. Calculate Axis A (UTC Instant -> Beijing Wall Clock)
@@ -458,19 +444,18 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     isForward: A.daYun.isForward,
     startYear: A.daYun.startYear,
     startAgeNominal: A.daYun.startAge + 1,
-    startDate: A.daYun.startDate,
+    startDate: `${A.daYun.startDate} (Asia/Shanghai)`,
     startOffset: A.daYun.startOffset,
     cycles: daYunCycles,
   };
 
-  // 10. Deduplicate branch interactions across the synthesized 4 pillars
-  const allInteractions = detectInteractions({
+  // 10. Detect all branch interactions across the synthesized 4 pillars
+  const interactions = detectAllInteractions({
     year: yearPillar.branch,
     month: monthPillar.branch,
     day: dayPillar.branch,
     hour: hourPillar ? hourPillar.branch : '',
   });
-  const interactions = deduplicateInteractions(allInteractions);
 
   // 11. Assemble Diagnostics Block
   const wallStr = `${localWall.year}-${String(localWall.month).padStart(2, '0')}-${String(localWall.day).padStart(2, '0')} ${String(localWall.hour).padStart(2, '0')}:${String(localWall.minute).padStart(2, '0')} (${loc.timezone})`;
@@ -489,9 +474,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     equationOfTimeMinutes: Number(solarTimeDetail.equationOfTimeMinutes.toFixed(2)),
     lunar: lunarDiag,
     convention: {
-      sect: input.sect === 2 ? 2 : 1,
+      sect,
       trueSolar: enableTrueSolar,
-      childLimitProvider: input.childLimitProvider || 'default',
+      childLimitProvider: input.childLimitProvider || 'three_days_one_year',
       ageBasis: 'nominal',
     },
     shichenAmbiguity: shichenAmbiguityDiag,

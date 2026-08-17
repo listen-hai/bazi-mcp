@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
+import { detectAllInteractions } from '../src/core/interactions';
 
 /**
  * Authoritative & Verified Real-World Benchmark Cases
@@ -320,4 +321,75 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.fourPillars).toBe('乙未 庚辰 戊申 戊午');
     expect(res.diagnostics.historicalTzApprox).toBe(true);
   });
+
+  // ── IV. Interaction Detection & Modern Refinement Cases ──
+
+  it('Interactions: Full Trine (申子辰三合水局) and Half-Trine (寅午半合火 / 酉丑半合金)', () => {
+    const direct1 = detectAllInteractions({ year: '寅', month: '午', day: '丑', hour: '酉' });
+    const types1 = direct1.map(i => `${i.type}:${i.branches.join('')}`);
+    expect(types1.includes('HALF_TRINE:寅午')).toBe(true);
+    expect(types1.includes('HALF_TRINE:酉丑')).toBe(true);
+    expect(types1.includes('HARM:丑午')).toBe(true);
+
+    const direct2 = detectAllInteractions({ year: '申', month: '子', day: '辰', hour: '午' });
+    expect(direct2.some(i => i.type === 'TRINE' && i.resultElement === 'water')).toBe(true);
+    expect(direct2.some(i => i.type === 'CLASH' && i.branches.includes('子') && i.branches.includes('午'))).toBe(true);
+  });
+
+  it('Interactions: Half-Trine (卯未半合木) without full trine', () => {
+    const direct = detectAllInteractions({ year: '寅', month: '未', day: '卯', hour: '未' });
+    const halfTrine = direct.find(i => i.type === 'HALF_TRINE' && i.branches.includes('卯') && i.branches.includes('未'));
+    expect(halfTrine).toBeDefined();
+    expect(halfTrine?.resultElement).toBe('wood');
+  });
+
+  it('Default sect=2 (23:00 rollover) produces self-consistent rat-chasing formula', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 120,
+      solarDate: { year: 2024, month: 3, day: 10 },
+      clockTime: { hour: 23, minute: 30 },
+      gender: 'male',
+    });
+    // Default sect=2: Day rolls to 甲戌, hour is 甲子 (甲日起甲子, 100% self-consistent)
+    expect(res.fourPillars).toBe('甲辰 丁卯 甲戌 甲子');
+    expect(res.diagnostics.convention.sect).toBe(2);
+    expect(res.diagnostics.convention.childLimitProvider).toBe('three_days_one_year');
+  });
+
+  it('Explicit sect=1 on late-Zi hour emits explanatory warning', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Asia/Shanghai',
+      longitude: 120,
+      solarDate: { year: 2024, month: 3, day: 10 },
+      clockTime: { hour: 23, minute: 30 },
+      gender: 'male',
+      sect: 1,
+    });
+    expect(res.fourPillars).toBe('甲辰 丁卯 癸酉 甲子');
+    expect(res.diagnostics.warnings.some(w => w.includes('Late Zi hour'))).toBe(true);
+  });
+
+  it('Xinjiang birth place emits oral local time advisory warning', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Urumqi',
+      solarDate: { year: 1990, month: 5, day: 20 },
+      clockTime: { hour: 10, minute: 0 },
+      gender: 'female',
+    });
+    expect(res.diagnostics.warnings.some(w => w.includes('Xinjiang'))).toBe(true);
+  });
+
+  it('Global pre-1890 birth emits historical LMT approximation warning (Einstein)', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Europe/Berlin',
+      longitude: 10.0,
+      solarDate: { year: 1879, month: 3, day: 14 },
+      clockTime: { hour: 11, minute: 30 },
+      gender: 'male',
+    });
+    expect(res.diagnostics.historicalTzApprox).toBe(true);
+    expect(res.daYun.startDate).toContain('(Asia/Shanghai)');
+  });
 });
+

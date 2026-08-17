@@ -103,7 +103,8 @@ export function createBaziMcpServer(): Server {
           sect: {
             type: 'integer',
             enum: [1, 2],
-            description: 'Early/late Zi hour convention: 1 (default, midnight rollover at 00:00) or 2 (rollover at 23:00)',
+            default: 2,
+            description: 'Early/late Zi hour convention: 2 (default, day rolls over at 23:00 / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or 1 (day rolls over at 00:00 / 子正换日)',
           },
           trueSolar: {
             type: 'boolean',
@@ -111,8 +112,7 @@ export function createBaziMcpServer(): Server {
           },
           childLimitProvider: {
             type: 'string',
-            enum: ['default', 'china95', 'season', 'lunarSect1'],
-            description: 'Da Yun onset calculation method',
+            description: 'Da Yun onset calculation method (default: "three_days_one_year")',
           },
         },
         required: ['gender'],
