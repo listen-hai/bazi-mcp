@@ -31,7 +31,7 @@ export const SHICHEN_RANGES: Record<ShichenBranch, ShichenRange> = {
 export function getShichenMidpoint(shichen: ShichenBranch): { hour: number; minute: number } {
   const range = SHICHEN_RANGES[shichen];
   if (!range) {
-    throw new Error(`无效的时辰: "${shichen}"。有效时辰为: 子, 丑, 寅, 卯, 辰, 巳, 午, 未, 申, 酉, 戌, 亥。`);
+    throw new Error(`Invalid shichen: "${shichen}". Valid values are: 子, 丑, 寅, 卯, 辰, 巳, 午, 未, 申, 酉, 戌, 亥.`);
   }
   return { hour: range.midHour, minute: range.midMinute };
 }

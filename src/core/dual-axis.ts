@@ -124,7 +124,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   let instant: number;
   let offsetMinutes: number;
   let isDst: boolean;
-  let lunarDiag: DiagnosticsOutput['农历'] = undefined;
+  let lunarDiag: DiagnosticsOutput['lunar'] = undefined;
 
   // Determine clock time (hour, minute)
   let baseHour = 12;
@@ -143,7 +143,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     baseMinute = 0;
   } else {
     // If no time is given and timeUnknown not explicitly set, throw error
-    throw new Error('缺少时刻信息：请提供 `clockTime` (钟表时间)、`shichen` (时辰) 或设置 `timeUnknown: true` (三柱盘)。');
+    throw new Error('Missing time information: please provide `clockTime` (clock time), `shichen` (traditional double-hour), or set `timeUnknown: true` (3-pillar chart).');
   }
 
   // 3. Handle Lunar vs Solar Date
@@ -166,7 +166,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
         timezone: 8,
       });
     } catch (err) {
-      throw new Error(`农历日期换算失败: ${(err as Error).message}`);
+      throw new Error(`Lunar date conversion failed: ${(err as Error).message}`);
     }
 
     const convSolar = lunarConvChart.calendar.civilSolar;
@@ -214,17 +214,17 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     const beijingSolarStr = `${beijingWall.year}-${String(beijingWall.month).padStart(2, '0')}-${String(beijingWall.day).padStart(2, '0')}`;
 
     lunarDiag = {
-      输入frame: lFrame,
-      换算公历: localSolarStr,
-      北京同日: beijingSolarStr,
-      农历描述: `${input.lunarDate.year}年${input.lunarDate.isLeapMonth ? '闰' : ''}${input.lunarDate.month}月${input.lunarDate.day}日`,
+      inputFrame: lFrame,
+      convertedSolarDate: localSolarStr,
+      beijingSolarDate: beijingSolarStr,
+      lunarDescription: `lunar ${input.lunarDate.year}-${String(input.lunarDate.month).padStart(2, '0')}-${String(input.lunarDate.day).padStart(2, '0')}${input.lunarDate.isLeapMonth ? ' (leap month)' : ''}`,
     };
 
     if (localSolarStr !== beijingSolarStr) {
       if (lFrame === 'local') {
-        warnings.push('当地日期与北京日期不同；若农历系按中国日期记录请改用 frame=beijing');
+        warnings.push('Local date differs from the Beijing date; if this lunar date is recorded by the China date, switch to frame=beijing instead.');
       } else {
-        warnings.push('北京日期与当地日期不同；当前已按中国公历日基准换算当地时刻。');
+        warnings.push('Beijing date differs from the local date; the local clock time has been converted using the China solar date as the reference.');
       }
     }
   } else if (input.solarDate) {
@@ -244,7 +244,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
     beijingWall = instantToWall(instant, 'Asia/Shanghai');
   } else {
-    throw new Error('缺少日期信息：请提供 `solarDate` (公历) 或 `lunarDate` (农历)。');
+    throw new Error('Missing date information: please provide `solarDate` (solar/Gregorian) or `lunarDate` (lunar).');
   }
 
   // 3.5 Timezone ambiguity at the resolved instant: coordinates can fall inside
@@ -252,7 +252,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   // regions like Xinjiang). Decide here, at the actual instant, not at geo lookup
   // time — two zones sharing the same UTC offset at this instant (e.g. the
   // Guajará-Mirim/Brazil overlap) is not a real ambiguity and gets no warning.
-  let tzAmbiguityDiag: DiagnosticsOutput['时区口径'] = undefined;
+  let tzAmbiguityDiag: DiagnosticsOutput['timezoneResolution'] = undefined;
   if (loc.alternateTimezones && loc.alternateTimezones.length > 0) {
     const baseOffset = tzOffsetMinutes(instant, loc.timezone);
     const genuineAlts = loc.alternateTimezones.filter(
@@ -262,15 +262,15 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       const diffHours = Number(
         (Math.max(...genuineAlts.map(alt => Math.abs(tzOffsetMinutes(instant, alt) - baseOffset))) / 60).toFixed(2)
       );
-      let note = `出生地坐标同时落入多个时区边界：${[loc.timezone, ...genuineAlts].join('、')}；本次排盘采用 "${loc.timezone}"（与候选时区最大相差 ${diffHours} 小时）。如需改用其他时区排盘，请显式传入 \`timezone\` 参数。`;
+      let note = `The birth coordinates fall inside more than one timezone boundary: ${[loc.timezone, ...genuineAlts].join(', ')}; this chart was calculated using "${loc.timezone}" (up to ${diffHours} hours different from the alternate candidates). To use a different timezone, explicitly pass the \`timezone\` parameter.`;
       if (loc.timezone === 'Asia/Shanghai' && genuineAlts.includes('Asia/Urumqi')) {
-        note += ' 出生地位于新疆：中国大陆自1949年起统一采用北京时间记录民事时间，但新疆部分家庭仍按新疆当地时间（UTC+6，比北京时间晚2小时）记录出生时刻；如确认应按当地时间排盘，请传入 `timezone: "Asia/Urumqi"`。';
+        note += ' The birth place is in Xinjiang: mainland China has used Beijing time as its single civil time zone since 1949, but some Xinjiang households still record birth times in Xinjiang local time (UTC+6, 2 hours behind Beijing time); if the birth was recorded in local time, pass `timezone: "Asia/Urumqi"`.';
       }
       tzAmbiguityDiag = {
-        使用: loc.timezone,
-        候选时区: genuineAlts,
-        时差小时: diffHours,
-        说明: note,
+        used: loc.timezone,
+        candidates: genuineAlts,
+        maxOffsetDiffHours: diffHours,
+        note,
       };
       warnings.push(note);
     }
@@ -280,7 +280,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   let historicalTzApprox = false;
   if (loc.timezone === 'Asia/Shanghai' && instant < Date.UTC(1901, 0, 1)) {
     historicalTzApprox = true;
-    warnings.push('1901年前中国各地采用地方平时（上海LMT为UTC+08:06），北京/广州等地存在数分钟系统偏差。');
+    warnings.push('Before 1901, localities across China used Local Mean Time (Shanghai LMT was UTC+08:06); Beijing, Guangzhou, and other cities have a systematic offset of a few minutes.');
   }
 
   // 5. Calculate Axis A (UTC Instant -> Beijing Wall Clock)
@@ -322,7 +322,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   );
 
   // 7. Shichen Ambiguity Check (if shichen was passed)
-  let shichenAmbiguityDiag: DiagnosticsOutput['时辰歧义'] = undefined;
+  let shichenAmbiguityDiag: DiagnosticsOutput['shichenAmbiguity'] = undefined;
   if (input.shichen && !input.clockTime && !input.timeUnknown) {
     const samplePoints = getShichenSamplePoints(input.shichen);
     const candidateHourPillars = new Set<string>();
@@ -367,19 +367,19 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     if (candidateHourPillars.size > 1) {
       shichenAmbiguityDiag = {
         isAmbiguous: true,
-        候选时柱: Array.from(candidateHourPillars),
+        candidateHourPillars: Array.from(candidateHourPillars),
       };
       if (input.shichen === '子') {
         warnings.push(
-          `提供的时辰为"子时"，涵盖早子时（23:00-24:00，属前一日）与晚子时（00:00-01:00，属当日），该区间内存在多个候选时柱: ${Array.from(
+          `The provided shichen is "子" (Zi), which spans early-Zi (23:00-24:00, belongs to the previous day) and late-Zi (00:00-01:00, belongs to the current day); this range contains multiple candidate hour pillars: ${Array.from(
             candidateHourPillars
-          ).join('、')}。建议核对具体钟表时刻以区分早/晚子时。`
+          ).join(', ')}. Please double-check the exact clock time to distinguish early-Zi from late-Zi.`
         );
       } else {
         warnings.push(
-          `提供的时辰为"${input.shichen}时"，经真太阳时与经度修正后跨越时辰边界，该区间内存在多个候选时柱: ${Array.from(
+          `The provided shichen is "${input.shichen}", and after True Solar Time and longitude correction it crosses a shichen boundary; this range contains multiple candidate hour pillars: ${Array.from(
             candidateHourPillars
-          ).join('、')}。建议核对具体钟表时刻。`
+          ).join(', ')}. Please double-check the exact clock time.`
         );
       }
     }
@@ -395,18 +395,18 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   const hourPillar = isUnknownTime ? null : formatPillar(B.pillars.hour, trueDayMasterStem);
 
   const fourPillarsStr = isUnknownTime
-    ? `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [时辰未知]`
+    ? `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`
     : `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} ${hourPillar!.ganZhi}`;
 
-  // 9. Format Da Yun (strictly from Axis A) with nominal age (虚岁)
+  // 9. Format Da Yun (strictly from Axis A) with nominal age
   const daYunCycles = A.daYun.cycles.map(c => ({
     index: c.index,
     stem: c.stem,
     branch: c.branch,
     ganZhi: c.ganZhi,
     startYear: c.startYear,
-    startAgeNominal: c.startAge + 1, // 虚岁
-    startAgeExact: c.startAge,       // 周岁
+    startAgeNominal: c.startAge + 1, // nominal age
+    startAgeExact: c.startAge,       // exact age
     endYear: c.endYear,
     endAgeNominal: c.endAge + 1,
     stemTenGod: calculateTenGod(trueDayMasterStem, c.stem),
@@ -439,25 +439,25 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   const axisBStr = solarTimeDetail.trueSolarDateTime;
 
   const diagnostics: DiagnosticsOutput = {
-    钟面: wallStr,
-    时区偏移: offsetStr,
-    UTC瞬时: utcInstantStr,
-    轴A_北京墙钟_定年月柱: axisAStr,
-    轴B_当地真太阳时_定日时柱: axisBStr,
-    经度修正分钟: Number(solarTimeDetail.longitudeCorrectionMinutes.toFixed(2)),
-    时差方程分钟: Number(solarTimeDetail.equationOfTimeMinutes.toFixed(2)),
-    农历: lunarDiag,
-    口径: {
+    wallClock: wallStr,
+    utcOffset: offsetStr,
+    utcInstant: utcInstantStr,
+    axisA_beijingWallClock_yearMonthPillars: axisAStr,
+    axisB_localTrueSolarTime_dayHourPillars: axisBStr,
+    longitudeCorrectionMinutes: Number(solarTimeDetail.longitudeCorrectionMinutes.toFixed(2)),
+    equationOfTimeMinutes: Number(solarTimeDetail.equationOfTimeMinutes.toFixed(2)),
+    lunar: lunarDiag,
+    convention: {
       sect: input.sect === 2 ? 2 : 1,
       trueSolar: enableTrueSolar,
       childLimitProvider: input.childLimitProvider || 'default',
-      年龄基准: '虚岁',
+      ageBasis: 'nominal',
     },
-    时辰歧义: shichenAmbiguityDiag,
-    时区口径: tzAmbiguityDiag,
+    shichenAmbiguity: shichenAmbiguityDiag,
+    timezoneResolution: tzAmbiguityDiag,
     historicalTzApprox,
-    警告: warnings,
-    引擎信息: {
+    warnings,
+    engineInfo: {
       baziEngine: `@openfate/bazi-engine@${baziEnginePkg.version}`,
       trueSolarTimeEngine: `@openfate/true-solar-time@${trueSolarTimePkg.version}`,
       schemaVersion: '1.0.0',
@@ -465,7 +465,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   };
 
   return {
-    四柱: fourPillarsStr,
+    fourPillars: fourPillarsStr,
     pillars: {
       year: yearPillar,
       month: monthPillar,
@@ -480,6 +480,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     },
     daYun,
     interactions,
-    诊断: diagnostics,
+    diagnostics,
   };
 }

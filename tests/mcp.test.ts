@@ -43,8 +43,8 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBeFalsy();
     const resultObj = JSON.parse(response.content[0].text);
-    expect(resultObj.四柱).toBe('甲辰 丙寅 戊戌 丙辰');
-    expect(resultObj.诊断.钟面).toContain('America/Los_Angeles');
+    expect(resultObj.fourPillars).toBe('甲辰 丙寅 戊戌 丙辰');
+    expect(resultObj.diagnostics.wallClock).toContain('America/Los_Angeles');
   });
 
   it('Should call calculate_bazi with lunarDate and frame=local via MCP', async () => {
@@ -71,8 +71,8 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBeFalsy();
     const resultObj = JSON.parse(response.content[0].text);
-    expect(resultObj.四柱).toBe('庚午 壬午 辛亥 丁酉');
-    expect(resultObj.诊断.农历.输入frame).toBe('local');
+    expect(resultObj.fourPillars).toBe('庚午 壬午 辛亥 丁酉');
+    expect(resultObj.diagnostics.lunar.inputFrame).toBe('local');
   });
 
   it('Should call calculate_bazi with timeUnknown=true for three-pillar chart via MCP', async () => {
@@ -98,7 +98,7 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBeFalsy();
     const resultObj = JSON.parse(response.content[0].text);
-    expect(resultObj.四柱).toContain('[时辰未知]');
+    expect(resultObj.fourPillars).toContain('[hour unknown]');
     expect(resultObj.pillars.hour).toBeNull();
   });
 
@@ -150,7 +150,7 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
     );
 
     expect(response.isError).toBe(true);
-    expect(response.content[0].text).toContain('[八字排盘错误]');
+    expect(response.content[0].text).toContain('[Bazi Calculation Error]');
   });
 
   it('Should flatten ZodError conflicts (solarDate + lunarDate) into a plain message, not JSON', async () => {
@@ -178,8 +178,8 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBe(true);
     const text = response.content[0].text;
-    expect(text).toContain('[八字排盘错误]');
-    expect(text).toContain('不能同时提供 solarDate');
+    expect(text).toContain('[Bazi Calculation Error]');
+    expect(text).toContain('Cannot provide both solarDate');
     // Must not leak raw zod issue JSON (code/path arrays etc.)
     expect(text).not.toContain('"code"');
     expect(text).not.toContain('"path"');
@@ -202,6 +202,6 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
     );
 
     expect(response.isError).toBe(true);
-    expect(response.content[0].text).toContain('未知的 MCP 工具');
+    expect(response.content[0].text).toContain('Unknown MCP tool');
   });
 });

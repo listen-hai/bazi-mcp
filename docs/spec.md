@@ -215,18 +215,18 @@ MCP 的消费者是 LLM，它无法自己发现输入被误解。**诊断块是�
 
 ```json
 {
-  "四柱": "庚午 壬午 辛亥 丁酉",
-  "诊断": {
-    "钟面": "1990-06-15 20:00 (America/Los_Angeles)",
-    "时区偏移": "-07:00 (夏令时生效)",
-    "UTC瞬时": "1990-06-16T03:00:00Z",
-    "轴A_北京墙钟_定年月柱": "1990-06-16 11:00",
-    "轴B_当地真太阳时_定日时柱": "1990-06-15 18:49",
-    "经度修正分钟": -69.78,
-    "时差方程分钟": -0.52,
-    "农历": { "输入frame": "local", "换算公历": "1990-06-15", "北京同日": "1990-06-16" },
-    "口径": { "sect": 1, "trueSolar": true, "childLimitProvider": "default", "年龄基准": "虚岁" },
-    "警告": ["当地日期与北京日期不同；若农历系按中国日期记录请改用 frame=beijing"]
+  "fourPillars": "庚午 壬午 辛亥 丁酉",
+  "diagnostics": {
+    "wallClock": "1990-06-15 20:00 (America/Los_Angeles)",
+    "utcOffset": "-07:00 (DST in effect)",
+    "utcInstant": "1990-06-16T03:00:00Z",
+    "axisA_beijingWallClock_yearMonthPillars": "1990-06-16 11:00",
+    "axisB_localTrueSolarTime_dayHourPillars": "1990-06-15 18:49",
+    "longitudeCorrectionMinutes": -69.78,
+    "equationOfTimeMinutes": -0.52,
+    "lunar": { "inputFrame": "local", "convertedSolarDate": "1990-06-15", "beijingSolarDate": "1990-06-16" },
+    "convention": { "sect": 1, "trueSolar": true, "childLimitProvider": "default", "ageBasis": "nominal" },
+    "warnings": ["Local date differs from the Beijing date; if this lunar date is recorded by the China date, switch to frame=beijing instead."]
   }
 }
 ```

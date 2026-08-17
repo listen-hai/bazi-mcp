@@ -41,8 +41,8 @@ export interface DaYunCycleOutput {
   branch: string;
   ganZhi: string;
   startYear: number;
-  startAgeNominal: number; // 虚岁 (startAge + 1)
-  startAgeExact: number;   // 周岁
+  startAgeNominal: number; // nominal age (startAge + 1)
+  startAgeExact: number;   // exact age
   endYear: number;
   endAgeNominal: number;
   stemTenGod: string;
@@ -72,38 +72,38 @@ export interface BranchInteractionOutput {
 }
 
 export interface DiagnosticsOutput {
-  钟面: string;
-  时区偏移: string;
-  UTC瞬时: string;
-  轴A_北京墙钟_定年月柱: string;
-  轴B_当地真太阳时_定日时柱: string;
-  经度修正分钟: number;
-  时差方程分钟: number;
-  农历?: {
-    输入frame: 'local' | 'beijing';
-    换算公历: string;
-    北京同日: string;
-    农历描述?: string;
+  wallClock: string;
+  utcOffset: string;
+  utcInstant: string;
+  axisA_beijingWallClock_yearMonthPillars: string;
+  axisB_localTrueSolarTime_dayHourPillars: string;
+  longitudeCorrectionMinutes: number;
+  equationOfTimeMinutes: number;
+  lunar?: {
+    inputFrame: 'local' | 'beijing';
+    convertedSolarDate: string;
+    beijingSolarDate: string;
+    lunarDescription?: string;
   };
-  口径: {
+  convention: {
     sect: 1 | 2;
     trueSolar: boolean;
     childLimitProvider: string;
-    年龄基准: string;
+    ageBasis: string;
   };
-  时辰歧义?: {
+  shichenAmbiguity?: {
     isAmbiguous: boolean;
-    候选时柱: string[];
+    candidateHourPillars: string[];
   };
-  时区口径?: {
-    使用: string;
-    候选时区: string[];
-    时差小时: number;
-    说明: string;
+  timezoneResolution?: {
+    used: string;
+    candidates: string[];
+    maxOffsetDiffHours: number;
+    note: string;
   };
   historicalTzApprox?: boolean;
-  警告: string[];
-  引擎信息: {
+  warnings: string[];
+  engineInfo: {
     baziEngine: string;
     trueSolarTimeEngine: string;
     schemaVersion: string;
@@ -111,7 +111,7 @@ export interface DiagnosticsOutput {
 }
 
 export interface BaziCalculationResult {
-  四柱: string;
+  fourPillars: string;
   pillars: {
     year: PillarOutput;
     month: PillarOutput;
@@ -127,7 +127,7 @@ export interface BaziCalculationResult {
   daYun: DaYunOutput;
   interactions: BranchInteractionOutput[];
   shenSha?: Record<string, string[]>;
-  诊断: DiagnosticsOutput;
+  diagnostics: DiagnosticsOutput;
 }
 
 export interface CityEntry {

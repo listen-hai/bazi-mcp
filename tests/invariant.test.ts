@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 
-describe('8.2 Invariant Tests (不变量测试)', () => {
-  // 不变量 1：同一 UTC 瞬时用不同时区表达 → 年月柱必须严格相同
+describe('8.2 Invariant Tests', () => {
+  // Invariant 1: the same UTC instant expressed in different timezones -> Year and Month pillars must be identical
   it('Invariant 1: Same UTC instant across multiple timezones produces identical Year and Month pillars', () => {
-    // 瞬时 2024-02-04T16:00:00Z (立春后)
+    // Instant 2024-02-04T16:00:00Z (after Lichun)
     // 1. Tacoma (America/Los_Angeles, UTC-8): 2024-02-04 08:00
     const tacoma = calculateDualAxisBazi({
       place: 'Tacoma, WA',
@@ -50,9 +50,9 @@ describe('8.2 Invariant Tests (不变量测试)', () => {
     expect(tokyo.pillars.month.ganZhi).toBe('丙寅');
   });
 
-  // 不变量 2：跨节气瞬时前后一分钟 → 月柱必须且只能跳一格
+  // Invariant 2: one minute either side of a solar term boundary -> the Month pillar must shift by exactly one step
   it('Invariant 2: Solar term boundary transition at Lichun 2024 (2024-02-04 16:26:56 CST)', () => {
-    // 立春前 10 分钟 (2024-02-04 16:15 CST) -> 年柱仍为 癸卯, 月柱为 乙丑
+    // 10 minutes before Lichun (2024-02-04 16:15 CST) -> Year pillar is still 癸卯, Month pillar is 乙丑
     const before = calculateDualAxisBazi({
       timezone: 'Asia/Shanghai',
       longitude: 120,
@@ -63,7 +63,7 @@ describe('8.2 Invariant Tests (不变量测试)', () => {
     expect(before.pillars.year.ganZhi).toBe('癸卯');
     expect(before.pillars.month.ganZhi).toBe('乙丑');
 
-    // 立春后 10 分钟 (2024-02-04 16:35 CST) -> 年柱跳为 甲辰, 月柱跳为 丙寅
+    // 10 minutes after Lichun (2024-02-04 16:35 CST) -> Year pillar shifts to 甲辰, Month pillar shifts to 丙寅
     const after = calculateDualAxisBazi({
       timezone: 'Asia/Shanghai',
       longitude: 120,

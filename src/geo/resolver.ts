@@ -140,8 +140,9 @@ export interface ResolvedLocation {
  * - If place resolves to multiple candidates, disambiguates or reports candidates.
  * - If place cannot be resolved, throws descriptive error.
  *
- * Note: latitude is not accepted as an input (docs/spec.md §5, 纬度不收) — only
- * longitude + timezone or place are supported entry points.
+ * Note: latitude is not accepted as an input (docs/spec.md §5: latitude is
+ * deliberately not accepted) — only longitude + timezone or place are
+ * supported entry points.
  */
 export function resolveLocation(input: {
   place?: string;
@@ -163,7 +164,7 @@ export function resolveLocation(input: {
 
     if (candidates.length === 0) {
       throw new Error(
-        `未能识别出生地 "${input.place}"。请使用英文城市名（如 "Beijing", "New York", "Lagos"），或显式传入 \`longitude\` 和 \`timezone\`。`
+        `Could not recognize birth place "${input.place}". Please use an English city name (e.g. "Beijing", "New York", "Lagos"), or explicitly pass \`longitude\` and \`timezone\`.`
       );
     }
 
@@ -185,11 +186,11 @@ export function resolveLocation(input: {
         .slice(0, 5)
         .map(
           c =>
-            `• ${c.name} (${c.province || ''}, ${c.country}) -> 经度: ${c.longitude}°, 时区: "${c.timezone}"`
+            `• ${c.name} (${c.province || ''}, ${c.country}) -> longitude: ${c.longitude}°, timezone: "${c.timezone}"`
         )
         .join('\n');
       throw new Error(
-        `地名 "${input.place}" 匹配到多个候选城市，请更精确指定（如 "San Francisco, CA"）或显式指定 \`longitude\` 与 \`timezone\`:\n${listStr}`
+        `Place name "${input.place}" matched multiple candidate cities; please specify more precisely (e.g. "San Francisco, CA") or explicitly provide \`longitude\` and \`timezone\`:\n${listStr}`
       );
     }
 
@@ -207,7 +208,7 @@ export function resolveLocation(input: {
   if (input.longitude !== undefined) {
     if (!input.timezone) {
       throw new Error(
-        `提供了经度 (${input.longitude}) 但缺少 \`timezone\` (IANA 时区名) 或 \`place\`。严禁通过经度四舍五入推算时区，请显式指定 \`timezone\`。`
+        `Longitude (${input.longitude}) was provided but \`timezone\` (IANA timezone name) or \`place\` is missing. Rounding longitude to infer a timezone is strictly forbidden; please explicitly specify \`timezone\`.`
       );
     }
 
@@ -218,6 +219,6 @@ export function resolveLocation(input: {
   }
 
   throw new Error(
-    '缺少出生地信息：请提供 `place` (英文城市名，如 "Beijing", "New York", "Lagos")，或同时提供 `longitude` 与 `timezone`。'
+    'Missing birth location: please provide `place` (English city name, e.g. "Beijing", "New York", "Lagos"), or both `longitude` and `timezone`.'
   );
 }

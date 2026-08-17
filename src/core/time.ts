@@ -128,7 +128,7 @@ export function wallToInstant(
   // 1. Spring-forward gap: Wall clock time does not exist
   if (candidates.length === 0) {
     throw new Error(
-      `墙钟时刻 ${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')} ${String(wall.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 在时区 ${tz} 中不存在（因夏令时春季跳跃），请核对出生记录。`
+      `Wall clock time ${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')} ${String(wall.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} does not exist in timezone ${tz} (falls in a DST spring-forward gap); please double-check the birth record.`
     );
   }
 
@@ -138,7 +138,7 @@ export function wallToInstant(
       const c1Str = new Date(candidates[0]).toISOString();
       const c2Str = new Date(candidates[1]).toISOString();
       throw new Error(
-        `墙钟时刻 ${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')} ${String(wall.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 在时区 ${tz} 中存在夏令时折返歧义（该时刻出现两次: 1st ${c1Str}, 2nd ${c2Str}）。请提供 dstFold=0 (夏令时) 或 dstFold=1 (标准时) 以消歧。`
+        `Wall clock time ${wall.year}-${String(wall.month).padStart(2, '0')}-${String(wall.day).padStart(2, '0')} ${String(wall.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} is ambiguous in timezone ${tz} due to a DST fall-back overlap (this time occurs twice: 1st ${c1Str}, 2nd ${c2Str}). Please provide dstFold=0 (DST) or dstFold=1 (standard time) to disambiguate.`
       );
     }
     const chosenInstant = candidates[dstFold === 1 ? 1 : 0];
@@ -170,7 +170,7 @@ export function wallToInstant(
 }
 
 /**
- * Formats offset in minutes to string like "+08:00", "-07:00 (夏令时生效)"
+ * Formats offset in minutes to string like "+08:00", "-07:00 (DST in effect)"
  */
 export function formatOffsetString(offsetMinutes: number, isDst: boolean): string {
   const sign = offsetMinutes >= 0 ? '+' : '-';
@@ -178,5 +178,5 @@ export function formatOffsetString(offsetMinutes: number, isDst: boolean): strin
   const h = String(Math.floor(abs / 60)).padStart(2, '0');
   const m = String(abs % 60).padStart(2, '0');
   const base = `${sign}${h}:${m}`;
-  return isDst ? `${base} (夏令时生效)` : base;
+  return isDst ? `${base} (DST in effect)` : base;
 }

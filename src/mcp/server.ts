@@ -178,7 +178,7 @@ export function createBaziMcpServer(): Server {
         };
       }
 
-      throw new Error(`未知的 MCP 工具: ${name}`);
+      throw new Error(`Unknown MCP tool: ${name}`);
     } catch (err: unknown) {
       const errMsg = err instanceof z.ZodError
         ? err.issues.map(i => i.message).join('; ')
@@ -188,7 +188,7 @@ export function createBaziMcpServer(): Server {
         content: [
           {
             type: 'text',
-            text: `[八字排盘错误] ${errMsg}`,
+            text: `[Bazi Calculation Error] ${errMsg}`,
           },
         ],
       };
