@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
+import { calculateTenGod, getMainQi } from '@openfate/bazi-engine';
 
 describe('8.1 Golden Test Suite (金标用例实测)', () => {
   // G1: 1998-07-31 14:10, Asia/Shanghai, 116.4074 -> 戊寅 己未 己卯 辛未
@@ -55,6 +56,38 @@ describe('8.1 Golden Test Suite (金标用例实测)', () => {
     expect(res.诊断.时区偏移).toContain('夏令时生效');
   });
 
+  // G3 also pins the Ten God computation: day master 辛, hour stem 丁 -> 七杀
+  it('G3: Hour stemTenGod is correctly 七杀 for day master 辛 / hour stem 丁', () => {
+    const res = calculateDualAxisBazi({
+      solarDate: { year: 1990, month: 6, day: 15 },
+      clockTime: { hour: 20, minute: 0 },
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      gender: 'male',
+    });
+    expect(res.dayMaster.char).toBe('辛');
+    expect(res.pillars.hour?.stem).toBe('丁');
+    expect(calculateTenGod('辛', '丁')).toBe('七杀'); // sanity-check correct engine call order
+    expect(res.pillars.hour?.stemTenGod).toBe('七杀');
+  });
+
+  // G3's Axis A (Beijing wall clock) rolls to a different calendar day than Axis B
+  // (local true solar time), so Axis A's own internal day master differs from the
+  // true day master (Axis B's). Da Yun branchTenGod must be keyed to the true day master.
+  it('G3: Da Yun branchTenGod is keyed to the true (Axis B) day master, not Axis A\'s', () => {
+    const res = calculateDualAxisBazi({
+      solarDate: { year: 1990, month: 6, day: 15 },
+      clockTime: { hour: 20, minute: 0 },
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      gender: 'male',
+    });
+    const cycle0 = res.daYun.cycles[0];
+    const expected = calculateTenGod(res.dayMaster.char, getMainQi(cycle0.branch));
+    expect(cycle0.branchTenGod).toBe(expected);
+    expect(cycle0.branchTenGod).toBe('偏印');
+  });
+
   // G4: 1990-06-15 08:00, Asia/Shanghai, 87.6168 -> 庚午 壬午 辛亥 庚寅
   // 新疆大经度差 + 中国夏令时
   it('G4: Xinjiang Large Longitude Shift + China DST', () => {
@@ -89,5 +122,30 @@ describe('8.1 Golden Test Suite (金标用例实测)', () => {
     expect(res.pillars.day.ganZhi).toBe('丁巳');
     expect(res.pillars.hour?.ganZhi).toBe('癸卯');
     expect(res.诊断.时区偏移).toContain('夏令时生效');
+  });
+
+  // G5 equivalence: the same physical birth entered as lunarDate {1988,5,18} with
+  // lunarDateFrame:'beijing' must derive the instant via the real Asia/Shanghai
+  // offset (not a hardcoded +8), so it matches the solarDate 1988-07-01 chart
+  // exactly, even though 1986-1991 China observed summer DST (UTC+9).
+  it('G5: lunarDate {1988,5,18} frame=beijing matches solarDate 1988-07-01 exactly', () => {
+    const solar = calculateDualAxisBazi({
+      solarDate: { year: 1988, month: 7, day: 1 },
+      clockTime: { hour: 7, minute: 20 },
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      gender: 'male',
+    });
+    const lunar = calculateDualAxisBazi({
+      lunarDate: { year: 1988, month: 5, day: 18 },
+      lunarDateFrame: 'beijing',
+      clockTime: { hour: 7, minute: 20 },
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      gender: 'male',
+    });
+    expect(lunar.四柱).toBe(solar.四柱);
+    expect(lunar.诊断.UTC瞬时).toBe(solar.诊断.UTC瞬时);
+    expect(solar.诊断.UTC瞬时).toBe('1988-06-30T22:20:00.000Z');
   });
 });

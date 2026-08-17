@@ -2,6 +2,7 @@ import {
   calculateBaziChart,
   calculateTenGod,
   detectInteractions,
+  getMainQi,
   BaziChart,
   DayBoundaryMode,
   Pillar,
@@ -9,6 +10,8 @@ import {
   BranchInteraction
 } from '@openfate/bazi-engine';
 import { getTrueSolarTimeFromInstant } from '@openfate/true-solar-time';
+import baziEnginePkg from '@openfate/bazi-engine/package.json';
+import trueSolarTimePkg from '@openfate/true-solar-time/package.json';
 import {
   BaziInput,
   BaziCalculationResult,
@@ -44,17 +47,21 @@ function formatPillar(
     };
   }
 
-  const stemTenGod = pillar.stem === dayMasterStem ? '日主' : calculateTenGod(pillar.stem, dayMasterStem);
+  const stemTenGod = pillar.stem === dayMasterStem ? '日主' : calculateTenGod(dayMasterStem, pillar.stem);
 
   const hiddenStems = (pillar.hiddenStems || []).map((h: HiddenStemInfo) => ({
     stem: h.stem,
     element: h.element,
-    tenGod: calculateTenGod(h.stem, dayMasterStem),
+    tenGod: calculateTenGod(dayMasterStem, h.stem),
     isMain: h.isMain,
   }));
 
   const mainHidden = hiddenStems.find(h => h.isMain);
-  const branchTenGod = mainHidden ? mainHidden.tenGod : (pillar as { branchTenGod?: string }).branchTenGod;
+  // Fallback recomputed against the true (Axis B) day master, not the raw engine
+  // value on `pillar` (which for Axis A pillars was computed against Axis A's own
+  // day master and would be wrong here). In practice every branch has a main
+  // hidden stem so this path is not expected to fire.
+  const branchTenGod = mainHidden ? mainHidden.tenGod : calculateTenGod(dayMasterStem, getMainQi(pillar.branch));
 
   return {
     stem: pillar.stem,
@@ -184,8 +191,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       beijingWall = instantToWall(instant, 'Asia/Shanghai');
     } else {
       // Beijing frame: The solar date corresponds to Beijing calendar
-      const beijingNaive = Date.UTC(convSolar.year, convSolar.month - 1, convSolar.day, baseHour, baseMinute, 0);
-      instant = beijingNaive - 8 * 3600000;
       beijingWall = {
         year: convSolar.year,
         month: convSolar.month,
@@ -194,6 +199,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
         minute: baseMinute,
         second: 0,
       };
+      // Use the real Asia/Shanghai offset (not a fixed +8) so this is correct
+      // during China's 1986-1991 DST years too.
+      instant = wallToInstant(beijingWall, 'Asia/Shanghai', input.dstFold).instant;
 
       localWall = instantToWall(instant, loc.timezone);
       offsetMinutes = tzOffsetMinutes(instant, loc.timezone);
@@ -292,7 +300,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
     for (const pt of samplePoints) {
       try {
-        const sampleInstantRes = wallToInstant(
+        // Throws on a DST gap (nonexistent wall time); the catch below then
+        // skips this sample point entirely.
+        wallToInstant(
           {
             year: localWall.year,
             month: localWall.month,
@@ -330,11 +340,19 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
         isAmbiguous: true,
         候选时柱: Array.from(candidateHourPillars),
       };
-      warnings.push(
-        `提供的时辰为"${input.shichen}时"，经真太阳时与经度修正后跨越时辰边界，该区间内存在多个候选时柱: ${Array.from(
-          candidateHourPillars
-        ).join('、')}。建议核对具体钟表时刻。`
-      );
+      if (input.shichen === '子') {
+        warnings.push(
+          `提供的时辰为"子时"，涵盖早子时（23:00-24:00，属前一日）与晚子时（00:00-01:00，属当日），该区间内存在多个候选时柱: ${Array.from(
+            candidateHourPillars
+          ).join('、')}。建议核对具体钟表时刻以区分早/晚子时。`
+        );
+      } else {
+        warnings.push(
+          `提供的时辰为"${input.shichen}时"，经真太阳时与经度修正后跨越时辰边界，该区间内存在多个候选时柱: ${Array.from(
+            candidateHourPillars
+          ).join('、')}。建议核对具体钟表时刻。`
+        );
+      }
     }
   }
 
@@ -362,8 +380,8 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     startAgeExact: c.startAge,       // 周岁
     endYear: c.endYear,
     endAgeNominal: c.endAge + 1,
-    stemTenGod: calculateTenGod(c.stem, trueDayMasterStem),
-    branchTenGod: c.branchTenGod,
+    stemTenGod: calculateTenGod(trueDayMasterStem, c.stem),
+    branchTenGod: calculateTenGod(trueDayMasterStem, getMainQi(c.branch)),
   }));
 
   const daYun: DaYunOutput = {
@@ -410,8 +428,8 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     historicalTzApprox,
     警告: warnings,
     引擎信息: {
-      baziEngine: '@openfate/bazi-engine@1.1.2',
-      trueSolarTimeEngine: '@openfate/true-solar-time@4.0.2',
+      baziEngine: `@openfate/bazi-engine@${baziEnginePkg.version}`,
+      trueSolarTimeEngine: `@openfate/true-solar-time@${trueSolarTimePkg.version}`,
       schemaVersion: '1.0.0',
     },
   };

@@ -52,8 +52,14 @@ export const BaziInputSchema = z.object({
   data => data.solarDate || data.lunarDate,
   { message: '必须提供 solarDate (公历) 或 lunarDate (农历) 之一。' }
 ).refine(
+  data => !(data.solarDate && data.lunarDate),
+  { message: '不能同时提供 solarDate (公历) 与 lunarDate (农历)，请只提供其中之一。' }
+).refine(
   data => data.clockTime || data.shichen || data.timeUnknown,
   { message: '必须提供 clockTime、shichen 或设置 timeUnknown: true 之一。' }
+).refine(
+  data => !(data.clockTime && data.shichen),
+  { message: '不能同时提供 clockTime (钟表时间) 与 shichen (时辰)，请只提供其中之一。' }
 ).refine(
   data => data.place || (data.longitude !== undefined && data.timezone),
   { message: '必须提供 place，或同时提供 longitude 与 timezone。' }

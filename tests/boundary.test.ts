@@ -1,6 +1,7 @@
 import { describe, it, expect, test } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 import { resolveLocation, lookupCity } from '../src/geo/resolver';
+import { BaziInputSchema } from '../src/schemas/input';
 
 describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
   // 1. 夏令时春季跳跃不存在时刻
@@ -249,5 +250,18 @@ describe('8.5 Boundary, DST & Edge Case Tests (边界与异常测试)', () => {
       gender: 'female'
     });
     expect(result.诊断.钟面).toContain('Asia/Kathmandu');
+  });
+
+  // 11. solarDate 与 lunarDate 互斥校验
+  it('Should reject input carrying both solarDate and lunarDate', () => {
+    const result = BaziInputSchema.safeParse({
+      solarDate: { year: 1988, month: 7, day: 1 },
+      lunarDate: { year: 1988, month: 5, day: 18 },
+      clockTime: { hour: 7, minute: 20 },
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      gender: 'male',
+    });
+    expect(result.success).toBe(false);
   });
 });

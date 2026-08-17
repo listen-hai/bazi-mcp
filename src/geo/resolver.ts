@@ -119,14 +119,15 @@ export interface ResolvedLocation {
  * Resolves location according to BaziInput contract:
  * - If explicit longitude AND timezone are provided, use them directly.
  * - If place is provided, look up coordinates and IANA timezone from global database.
- * - If only coordinates (longitude + latitude) are provided, use @photostructure/tz-lookup.
  * - If place resolves to multiple candidates, disambiguates or reports candidates.
  * - If place cannot be resolved, throws descriptive error.
+ *
+ * Note: latitude is not accepted as an input (docs/spec.md §5, 纬度不收) — only
+ * longitude + timezone or place are supported entry points.
  */
 export function resolveLocation(input: {
   place?: string;
   longitude?: number;
-  latitude?: number;
   timezone?: string;
 }): ResolvedLocation {
   // 1. Explicit longitude + timezone provided
@@ -134,7 +135,6 @@ export function resolveLocation(input: {
     return {
       longitude: input.longitude,
       timezone: input.timezone,
-      latitude: input.latitude,
       placeName: input.place,
     };
   }
@@ -144,20 +144,6 @@ export function resolveLocation(input: {
     const candidates = lookupCity(input.place);
 
     if (candidates.length === 0) {
-      if (input.longitude !== undefined && input.latitude !== undefined) {
-        try {
-          const tz = tzlookup(input.latitude, input.longitude);
-          return {
-            longitude: input.longitude,
-            latitude: input.latitude,
-            timezone: tz,
-            placeName: input.place,
-          };
-        } catch {
-          // fall through
-        }
-      }
-
       throw new Error(
         `未能识别出生地 "${input.place}"。请使用英文城市名（如 "Beijing", "New York", "Lagos"），或显式传入 \`longitude\` 和 \`timezone\`。`
       );
@@ -171,7 +157,7 @@ export function resolveLocation(input: {
         return {
           longitude: input.longitude !== undefined ? input.longitude : city.longitude,
           timezone: input.timezone || city.timezone,
-          latitude: input.latitude !== undefined ? input.latitude : city.latitude,
+          latitude: city.latitude,
           placeName: `${city.name} (${city.country})`,
         };
       }
@@ -192,28 +178,13 @@ export function resolveLocation(input: {
     return {
       longitude: input.longitude !== undefined ? input.longitude : city.longitude,
       timezone: input.timezone || city.timezone,
-      latitude: input.latitude !== undefined ? input.latitude : city.latitude,
+      latitude: city.latitude,
       placeName: `${city.name} (${city.country})`,
     };
   }
 
-  // 3. Only coordinates provided without timezone
+  // 3. Only longitude provided without timezone
   if (input.longitude !== undefined) {
-    if (input.latitude !== undefined) {
-      try {
-        const tz = tzlookup(input.latitude, input.longitude);
-        return {
-          longitude: input.longitude,
-          latitude: input.latitude,
-          timezone: input.timezone || tz,
-        };
-      } catch {
-        throw new Error(
-          `根据经纬度 (${input.longitude}, ${input.latitude}) 推算时区失败，请显式提供 \`timezone\` (IANA 时区名)。`
-        );
-      }
-    }
-
     if (!input.timezone) {
       throw new Error(
         `提供了经度 (${input.longitude}) 但缺少 \`timezone\` (IANA 时区名) 或 \`place\`。严禁通过经度四舍五入推算时区，请显式指定 \`timezone\`。`

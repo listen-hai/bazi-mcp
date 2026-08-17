@@ -9,12 +9,13 @@ import { BaziInputSchema, LookupLocationSchema } from '../schemas/input';
 import { calculateDualAxisBazi } from '../core/dual-axis';
 import { lookupCity } from '../geo/resolver';
 import { BaziInput } from '../types';
+import rootPkg from '../../package.json';
 
 export function createBaziMcpServer(): Server {
   const server = new Server(
     {
       name: 'bazi-mcp',
-      version: '1.0.3',
+      version: rootPkg.version,
     },
     {
       capabilities: {
