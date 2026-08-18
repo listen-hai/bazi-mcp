@@ -644,6 +644,20 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(trumpJiaJi?.resultElement).toBe('earth');
     expect(trumpJiaJi?.potentialElement).toBe('earth');
     expect(trumpJiaJi?.pillars).toEqual(['month', 'day', 'hour']);
+
+    // Directional (巳午未) in Trump chart
+    const trumpDir = trump.interactions.find(i => i.type === 'DIRECTIONAL');
+    expect(trumpDir).toBeDefined();
+    expect(trumpDir?.potentialElement).toBe('fire');
+    expect(trumpDir?.transformed).toBeNull();
+    expect(trumpDir?.transformNote).toBeDefined();
+
+    // Half-Trine (午戌) in Trump chart
+    const trumpHalfTrine = trump.interactions.find(i => i.type === 'HALF_TRINE');
+    expect(trumpHalfTrine).toBeDefined();
+    expect(trumpHalfTrine?.potentialElement).toBe('fire');
+    expect(trumpHalfTrine?.transformed).toBeNull();
+    expect(trumpHalfTrine?.transformNote).toBeDefined();
   });
 });
 

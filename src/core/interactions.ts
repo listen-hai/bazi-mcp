@@ -223,7 +223,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   for (const d of DIRECTIONALS) {
     if (d.branches.every(b => branchMap.has(b))) {
       const pNames = d.branches.flatMap(b => branchMap.get(b)!);
-      addResult('DIRECTIONAL', d.branches, pNames, d.element, `Directional (${d.name})`);
+      addResult(
+        'DIRECTIONAL',
+        d.branches,
+        pNames,
+        d.element,
+        `Directional (${d.name})`,
+        '三会局之化气需结合月令得气与透干引化情况，本服务不作武断判定'
+      );
     }
   }
 
@@ -232,7 +239,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   for (const t of TRINES) {
     if (t.branches.every(b => branchMap.has(b))) {
       const pNames = t.branches.flatMap(b => branchMap.get(b)!);
-      addResult('TRINE', t.branches, pNames, t.element, `Trine (${t.name})`);
+      addResult(
+        'TRINE',
+        t.branches,
+        pNames,
+        t.element,
+        `Trine (${t.name})`,
+        '三合局之化气需结合月令得气与透干引化情况，本服务不作武断判定'
+      );
       fullTrineElements.add(t.element);
     }
   }

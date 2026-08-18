@@ -70,8 +70,9 @@ export interface BranchInteractionOutput {
   branches?: string[];
   stems?: string[];
   pillars: string[];
-  resultElement?: string;
   potentialElement?: string;
+  /** @deprecated Use `potentialElement` instead. */
+  resultElement?: string;
   transformed?: boolean | null;
   description: string;
   transformNote?: string;
