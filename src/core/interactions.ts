@@ -5,14 +5,27 @@ interface PillarBranches {
   month: string;
   day: string;
   hour: string;
+  yearStem?: string;
+  monthStem?: string;
+  dayStem?: string;
+  hourStem?: string;
 }
 
 interface InteractionDef {
   type: string;
-  branches: string[];
+  branches?: string[];
+  stems?: string[];
   resultElement?: string;
   description: string;
 }
+
+const STEM_COMBINATIONS: Array<{ stems: [string, string]; element: string; name: string }> = [
+  { stems: ['甲', '己'], element: 'earth', name: '甲己合化土' },
+  { stems: ['乙', '庚'], element: 'metal', name: '乙庚合化金' },
+  { stems: ['丙', '辛'], element: 'water', name: '丙辛合化水' },
+  { stems: ['丁', '壬'], element: 'wood', name: '丁壬合化木' },
+  { stems: ['戊', '癸'], element: 'fire', name: '戊癸合化火' },
+];
 
 const TRINES: Array<{ branches: [string, string, string]; element: string; name: string }> = [
   { branches: ['申', '子', '辰'], element: 'water', name: '申子辰三合水局' },
@@ -144,6 +157,42 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   for (const p of activePillars) {
     if (!branchMap.has(p.branch)) branchMap.set(p.branch, []);
     branchMap.get(p.branch)!.push(p.name);
+  }
+
+  // 0. 天干五合 (Heavenly Stem Combinations)
+  if (pillars.yearStem && pillars.monthStem && pillars.dayStem) {
+    const activeStems: Array<{ name: string; stem: string }> = [
+      { name: 'year', stem: pillars.yearStem },
+      { name: 'month', stem: pillars.monthStem },
+      { name: 'day', stem: pillars.dayStem },
+    ];
+    if (pillars.hourStem) {
+      activeStems.push({ name: 'hour', stem: pillars.hourStem });
+    }
+
+    const stemMap = new Map<string, string[]>();
+    for (const p of activeStems) {
+      if (!stemMap.has(p.stem)) stemMap.set(p.stem, []);
+      stemMap.get(p.stem)!.push(p.name);
+    }
+
+    for (const sc of STEM_COMBINATIONS) {
+      if (sc.stems.every(s => stemMap.has(s))) {
+        const pNames = sc.stems.flatMap(s => stemMap.get(s)!);
+        const sortedStems = [...sc.stems].sort().join('-');
+        const key = `STEM_COMBINATION:${sortedStems}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          results.push({
+            type: 'STEM_COMBINATION',
+            stems: sc.stems,
+            pillars: pNames,
+            resultElement: sc.element,
+            description: `Stem Combination (${sc.name})`,
+          });
+        }
+      }
+    }
   }
 
   // 1. 三会 (Directionals)

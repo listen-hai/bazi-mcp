@@ -67,7 +67,8 @@ export interface DaYunOutput {
 
 export interface BranchInteractionOutput {
   type: string;
-  branches: string[];
+  branches?: string[];
+  stems?: string[];
   pillars: string[];
   resultElement?: string;
   description: string;

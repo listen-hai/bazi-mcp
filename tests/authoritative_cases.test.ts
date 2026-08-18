@@ -580,5 +580,62 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.diagnostics.locationSource).toBe('mixed');
     expect(res.diagnostics.warnings.some(w => w.includes('custom timezone'))).toBe(true);
   });
+
+  it('W1: Heavenly Stem Combinations (天干五合) full verification', () => {
+    // 1. All 5 combinations: 甲己, 乙庚, 丙辛, 丁壬, 戊癸
+    const scJiaJi = detectAllInteractions({
+      year: '子', month: '未', day: '未', hour: '酉',
+      yearStem: '甲', monthStem: '辛', dayStem: '丁', hourStem: '己'
+    });
+    const jiaJi = scJiaJi.find(i => i.type === 'STEM_COMBINATION');
+    expect(jiaJi).toBeDefined();
+    expect(jiaJi?.stems).toEqual(['甲', '己']);
+    expect(jiaJi?.resultElement).toBe('earth');
+    expect(jiaJi?.description).toContain('甲己合化土');
+
+    const scYiGeng = detectAllInteractions({
+      year: '子', month: '寅', day: '辰', hour: '午',
+      yearStem: '乙', monthStem: '庚', dayStem: '丙', hourStem: '壬'
+    });
+    const yiGeng = scYiGeng.find(i => i.type === 'STEM_COMBINATION');
+    expect(yiGeng).toBeDefined();
+    expect(yiGeng?.stems).toEqual(['乙', '庚']);
+    expect(yiGeng?.resultElement).toBe('metal');
+    expect(yiGeng?.description).toContain('乙庚合化金');
+
+    const scBingXin = detectAllInteractions({
+      year: '子', month: '寅', day: '辰', hour: '午',
+      yearStem: '丙', monthStem: '辛', dayStem: '戊', hourStem: '癸'
+    });
+    const bingXin = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('丙'));
+    const wuGui = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('戊'));
+    expect(bingXin?.resultElement).toBe('water');
+    expect(bingXin?.description).toContain('丙辛合化水');
+    expect(wuGui?.resultElement).toBe('fire');
+    expect(wuGui?.description).toContain('戊癸合化火');
+
+    const scDingRen = detectAllInteractions({
+      year: '巳', month: '申', day: '卯', hour: '亥',
+      yearStem: '己', monthStem: '壬', dayStem: '乙', hourStem: '丁'
+    });
+    const dingRen = scDingRen.find(i => i.type === 'STEM_COMBINATION');
+    expect(dingRen).toBeDefined();
+    expect(dingRen?.stems).toEqual(['丁', '壬']);
+    expect(dingRen?.resultElement).toBe('wood');
+    expect(dingRen?.description).toContain('丁壬合化木');
+
+    // 2. Full real chart verification (Trump: 丙戌 甲午 己未 己巳)
+    const trump = calculateDualAxisBazi({
+      timezone: 'America/New_York',
+      longitude: -73.935,
+      solarDate: { year: 1946, month: 6, day: 14 },
+      clockTime: { hour: 10, minute: 54 },
+      gender: 'male',
+    });
+    const trumpJiaJi = trump.interactions.find(i => i.type === 'STEM_COMBINATION');
+    expect(trumpJiaJi).toBeDefined();
+    expect(trumpJiaJi?.stems).toEqual(['甲', '己']);
+    expect(trumpJiaJi?.resultElement).toBe('earth');
+  });
 });
 

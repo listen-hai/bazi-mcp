@@ -486,12 +486,16 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     cycles: daYunCycles,
   };
 
-  // 10. Detect all branch interactions across the synthesized 4 pillars
+  // 10. Detect all stem & branch interactions across the synthesized 4 pillars
   const interactions = detectAllInteractions({
     year: yearPillar.branch,
     month: monthPillar.branch,
     day: dayPillar.branch,
     hour: hourPillar ? hourPillar.branch : '',
+    yearStem: yearPillar.stem,
+    monthStem: monthPillar.stem,
+    dayStem: dayPillar.stem,
+    hourStem: hourPillar ? hourPillar.stem : undefined,
   });
 
   // 11. Assemble Diagnostics Block
