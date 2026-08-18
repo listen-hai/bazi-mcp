@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-114%20passed%2C%200%20failed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-116%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
 > 基于物理双时间轴天文学算法、全球离线地理数据库（7,329 个城市，227 个国家）与全量历史夏令时支持的高精度中国传统子平八字排盘 Model Context Protocol (MCP) 服务。
@@ -129,7 +129,7 @@ bazi-mcp
 *\* `solarDate` 与 `lunarDate` 必须提供其一。*  
 *\*\* `clockTime`、`shichen`、`timeUnknown: true` 必须提供其一。*
 
-`diagnostics.locationSource` 字段会明确指示坐标来源是全球城市库解析（`"resolved"`）还是调用方直接传入（`"caller_supplied"`）。
+`diagnostics.locationSource` 字段会明确指示坐标来源是全球城市库解析（`"resolved"`）、调用方完整自定义传入（`"caller_supplied"`），还是混合模式（`"mixed"`，即城市库解析经度搭配调用方指定的自定义时区）。
 
 ---
 
@@ -142,7 +142,7 @@ bazi-mcp
 
 ---
 
-## 🧪 权威金标测试矩阵 (114 个用例 100% 全绿通过)
+## 🧪 权威金标测试矩阵 (116 个用例 100% 全绿通过)
 
 1. **Astro-Databank 权威医院出生证明 (AA级) 真实名人命例**：
    - 特朗普 (Donald Trump): `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`

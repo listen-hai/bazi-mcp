@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@lhk714/bazi-mcp.svg)](https://www.npmjs.com/package/@lhk714/bazi-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/listen-hai/bazi-mcp/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-114%20passed%2C%200%20failed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-116%20passed%2C%200%20failed-brightgreen.svg)]()
 [![Bun](https://img.shields.io/badge/runtime-Bun%20%7C%20Node-black.svg)]()
 
 > Deterministic, high-precision Four Pillars of Destiny (八字排盘) Model Context Protocol (MCP) server powered by a physical dual-axis astronomical time engine and global geographic database (7,329 cities across 227 countries).
@@ -120,7 +120,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 *\* Provide either `solarDate` or `lunarDate`.*  
 *\*\* Provide either `clockTime`, `shichen`, or `timeUnknown: true`.*
 
-`diagnostics.locationSource` reports whether the location was `"resolved"` from the global city database or `"caller_supplied"`.
+`diagnostics.locationSource` reports whether the location was `"resolved"` from the global city database, `"caller_supplied"` via explicit coordinates, or `"mixed"` (place coordinates paired with a caller-supplied custom timezone).
 
 ---
 
@@ -135,7 +135,7 @@ Resolves city names to coordinates, administrative regions, and official IANA ti
 
 ## 🧪 Verification & Benchmark Matrix
 
-`@lhk714/bazi-mcp` is verified against 114 rigorous test cases (100% passing):
+`@lhk714/bazi-mcp` is verified against 116 rigorous test cases (100% passing):
 
 1. **Astro-Databank Rodden Rating AA Hospital Birth Certificates**:
    - **Donald Trump**: `1946-06-14 10:54 EDT` (New York, NY) ➔ `丙戌 甲午 己未 己巳`

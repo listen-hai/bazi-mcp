@@ -134,7 +134,7 @@ export interface ResolvedLocation {
   province?: string;
   placeName?: string;
   alternateTimezones?: string[];
-  locationSource: 'resolved' | 'caller_supplied';
+  locationSource: 'resolved' | 'caller_supplied' | 'mixed';
   mixedWarning?: string;
 }
 
@@ -142,8 +142,9 @@ export interface ResolvedLocation {
  * Resolves location according to BaziInput contract:
  * - If explicit longitude AND timezone are provided, use them directly (locationSource: 'caller_supplied').
  * - If place is provided alone, look up coordinates and IANA timezone from global database (locationSource: 'resolved').
- * - If place is provided alongside both longitude AND timezone, explicit values are used and a mixed warning is attached.
- * - Partial mixing (place + only longitude, or place + only timezone) is strictly rejected to prevent geographical mismatches.
+ * - If place is provided alongside custom timezone, coordinates are resolved and timezone is overridden (locationSource: 'mixed').
+ * - If place is provided alongside both longitude AND timezone, explicit values are used (locationSource: 'caller_supplied').
+ * - Partial mixing (place + only longitude without timezone) is strictly rejected to prevent geographical mismatches.
  * - If same-name cities all share one timezone: auto-pick (no chart impact).
  * - If same-name cities disagree on timezone: always throw with candidate list.
  * - If place cannot be resolved, throws descriptive error.
@@ -179,7 +180,7 @@ export function resolveLocation(input: {
     );
   }
 
-  // 3. Place provided (with optional timezone override) -> resolved
+  // 3. Place provided (with optional timezone override)
   if (hasPlace) {
     const candidates = lookupCity(input.place!);
 
@@ -198,6 +199,13 @@ export function resolveLocation(input: {
       // All exact-name matches agree on timezone -> no chart impact, pick silently.
       if (sameTimezone) {
         const city = candidates[0];
+        const isAlternateTz = Boolean(input.timezone && city.alternateTimezones?.includes(input.timezone));
+        const isCustomTz = Boolean(input.timezone && input.timezone !== city.timezone && !isAlternateTz);
+        const locationSource: 'resolved' | 'mixed' = isCustomTz ? 'mixed' : 'resolved';
+        const mixedWarning = isCustomTz
+          ? `Place "${input.place}" was resolved for coordinates (${city.longitude}°), but custom timezone ("${input.timezone}") was supplied by caller.`
+          : undefined;
+
         return {
           longitude: city.longitude,
           timezone: input.timezone || city.timezone,
@@ -205,7 +213,8 @@ export function resolveLocation(input: {
           province: city.province,
           placeName: `${city.name} (${city.country})`,
           alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
-          locationSource: 'resolved',
+          locationSource,
+          mixedWarning,
         };
       }
 
@@ -225,6 +234,13 @@ export function resolveLocation(input: {
     }
 
     const city = candidates[0];
+    const isAlternateTz = Boolean(input.timezone && city.alternateTimezones?.includes(input.timezone));
+    const isCustomTz = Boolean(input.timezone && input.timezone !== city.timezone && !isAlternateTz);
+    const locationSource: 'resolved' | 'mixed' = isCustomTz ? 'mixed' : 'resolved';
+    const mixedWarning = isCustomTz
+      ? `Place "${input.place}" was resolved for coordinates (${city.longitude}°), but custom timezone ("${input.timezone}") was supplied by caller.`
+      : undefined;
+
     return {
       longitude: city.longitude,
       timezone: input.timezone || city.timezone,
@@ -232,7 +248,8 @@ export function resolveLocation(input: {
       province: city.province,
       placeName: `${city.name} (${city.country})`,
       alternateTimezones: input.timezone ? undefined : city.alternateTimezones,
-      locationSource: 'resolved',
+      locationSource,
+      mixedWarning,
     };
   }
 

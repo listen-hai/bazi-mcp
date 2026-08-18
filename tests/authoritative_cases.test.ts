@@ -553,5 +553,32 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       })
     ).toThrow('Invalid solar calendar date: 1998-02-30 does not exist');
   });
+
+  it('Y1: Si (巳) hidden stem ordering is 本气(丙) -> 中气(庚) -> 余气(戊)', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Beijing',
+      solarDate: { year: 2024, month: 5, day: 15 },
+      clockTime: { hour: 10, minute: 0 },
+      gender: 'male',
+    });
+    // Month branch is 巳
+    expect(res.pillars.month.branch).toBe('巳');
+    expect(res.pillars.month.hiddenStems.map(h => h.stem)).toEqual(['丙', '庚', '戊']);
+    expect(res.pillars.month.hiddenStems[0].isMain).toBe(true);
+    expect(res.pillars.month.hiddenStems[1].isMain).toBe(false);
+    expect(res.pillars.month.hiddenStems[2].isMain).toBe(false);
+  });
+
+  it('Y2: Place with custom timezone returns locationSource: "mixed"', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Beijing',
+      timezone: 'Asia/Tokyo',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.diagnostics.locationSource).toBe('mixed');
+    expect(res.diagnostics.warnings.some(w => w.includes('custom timezone'))).toBe(true);
+  });
 });
 

@@ -46,7 +46,19 @@ function formatPillar(
 ): PillarOutput {
   const stemTenGod = isDayPillar ? '日主' : calculateTenGod(dayMasterStem, pillar.stem);
 
-  const hiddenStems = (pillar.hiddenStems || []).map((h: HiddenStemInfo) => ({
+  let rawHiddenStems = pillar.hiddenStems || [];
+  // Normalize Si (巳) hidden stem ordering to classical 本气(丙) -> 中气(庚) -> 余气(戊)
+  // for complete consistency across all Four Cardinal Branches (寅: 甲丙戊, 申: 庚壬戊, 巳: 丙庚戊, 亥: 壬甲).
+  if (pillar.branch === '巳' && rawHiddenStems.length === 3) {
+    const bing = rawHiddenStems.find(h => h.stem === '丙');
+    const geng = rawHiddenStems.find(h => h.stem === '庚');
+    const wu = rawHiddenStems.find(h => h.stem === '戊');
+    if (bing && geng && wu) {
+      rawHiddenStems = [bing, geng, wu];
+    }
+  }
+
+  const hiddenStems = rawHiddenStems.map((h: HiddenStemInfo) => ({
     stem: h.stem,
     element: h.element,
     tenGod: calculateTenGod(dayMasterStem, h.stem),
