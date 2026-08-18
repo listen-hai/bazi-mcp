@@ -99,7 +99,7 @@ Add `@lhk714/bazi-mcp` to your MCP client config (e.g. Claude Desktop, Cursor, C
 ## 🛠️ MCP Tools Reference
 
 ### 1. `calculate_bazi`
-Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nominal age 虚岁), Branch Interactions (刑冲合会), and Diagnostic Metadata.
+Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nominal age 虚岁), Stem & Branch Interactions (天干五合、地支刑冲合会), and Diagnostic Metadata.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|

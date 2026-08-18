@@ -50,7 +50,7 @@ export function createBaziMcpServer(): Server {
             description: 'Solar (Gregorian) birth date (mutually exclusive with lunarDate)',
             additionalProperties: false,
             properties: {
-              year: { type: 'integer', description: 'Year (e.g. 1990)' },
+              year: { type: 'integer', description: 'Solar year (1800-2100, e.g. 1990)' },
               month: { type: 'integer', description: 'Month (1-12)' },
               day: { type: 'integer', description: 'Day (1-31)' },
             },
@@ -61,7 +61,7 @@ export function createBaziMcpServer(): Server {
             description: 'Lunar (Chinese calendar) birth date (mutually exclusive with solarDate)',
             additionalProperties: false,
             properties: {
-              year: { type: 'integer', description: 'Lunar year (e.g. 1990)' },
+              year: { type: 'integer', description: 'Lunar year (1800-2100, e.g. 1990)' },
               month: { type: 'integer', description: 'Lunar month (1-12)' },
               day: { type: 'integer', description: 'Lunar day (1-30)' },
               isLeapMonth: { type: 'boolean', description: 'Whether this is a leap month' },

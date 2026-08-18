@@ -138,6 +138,17 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   const results: BranchInteractionOutput[] = [];
   const seen = new Set<string>();
 
+  const PILLAR_ORDER: Record<string, number> = {
+    year: 0,
+    month: 1,
+    day: 2,
+    hour: 3,
+  };
+
+  function sortPillars(pNames: string[]): string[] {
+    return [...pNames].sort((a, b) => (PILLAR_ORDER[a] ?? 99) - (PILLAR_ORDER[b] ?? 99));
+  }
+
   function addResult(type: string, branches: string[], pillarNames: string[], resultElement?: string, description?: string) {
     const sortedBranches = [...branches].sort().join('-');
     const key = `${type}:${sortedBranches}`;
@@ -146,7 +157,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
       results.push({
         type,
         branches,
-        pillars: pillarNames,
+        pillars: sortPillars(pillarNames),
         resultElement,
         description: description || `${type} (${branches.join('')})`,
       });
@@ -186,7 +197,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
           results.push({
             type: 'STEM_COMBINATION',
             stems: sc.stems,
-            pillars: pNames,
+            pillars: sortPillars(pNames),
             resultElement: sc.element,
             description: `Stem Combination (${sc.name})`,
           });
