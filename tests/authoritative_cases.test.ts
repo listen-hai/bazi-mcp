@@ -333,7 +333,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(types1.includes('HARM:丑午')).toBe(true);
 
     const direct2 = detectAllInteractions({ year: '申', month: '子', day: '辰', hour: '午' });
-    expect(direct2.some(i => i.type === 'TRINE' && i.resultElement === 'water')).toBe(true);
+    expect(direct2.some(i => i.type === 'TRINE' && i.potentialElement === 'water')).toBe(true);
     expect(direct2.some(i => i.type === 'CLASH' && i.branches.includes('子') && i.branches.includes('午'))).toBe(true);
   });
 
@@ -341,7 +341,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const direct = detectAllInteractions({ year: '寅', month: '未', day: '卯', hour: '未' });
     const halfTrine = direct.find(i => i.type === 'HALF_TRINE' && i.branches.includes('卯') && i.branches.includes('未'));
     expect(halfTrine).toBeDefined();
-    expect(halfTrine?.resultElement).toBe('wood');
+    expect(halfTrine?.potentialElement).toBe('wood');
   });
 
   it('Default sect=2 (23:00 rollover) produces self-consistent rat-chasing formula', () => {
@@ -590,7 +590,6 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const jiaJi = scJiaJi.find(i => i.type === 'STEM_COMBINATION');
     expect(jiaJi).toBeDefined();
     expect(jiaJi?.stems).toEqual(['甲', '己']);
-    expect(jiaJi?.resultElement).toBe('earth');
     expect(jiaJi?.potentialElement).toBe('earth');
     expect(jiaJi?.description).toContain('甲己相合');
     expect(jiaJi?.transformNote).toBeDefined();
@@ -602,7 +601,6 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const yiGeng = scYiGeng.find(i => i.type === 'STEM_COMBINATION');
     expect(yiGeng).toBeDefined();
     expect(yiGeng?.stems).toEqual(['乙', '庚']);
-    expect(yiGeng?.resultElement).toBe('metal');
     expect(yiGeng?.potentialElement).toBe('metal');
     expect(yiGeng?.description).toContain('乙庚相合');
 
@@ -612,10 +610,8 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     });
     const bingXin = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('丙'));
     const wuGui = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('戊'));
-    expect(bingXin?.resultElement).toBe('water');
     expect(bingXin?.potentialElement).toBe('water');
     expect(bingXin?.description).toContain('丙辛相合');
-    expect(wuGui?.resultElement).toBe('fire');
     expect(wuGui?.potentialElement).toBe('fire');
     expect(wuGui?.description).toContain('戊癸相合');
 
@@ -626,7 +622,6 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const dingRen = scDingRen.find(i => i.type === 'STEM_COMBINATION');
     expect(dingRen).toBeDefined();
     expect(dingRen?.stems).toEqual(['丁', '壬']);
-    expect(dingRen?.resultElement).toBe('wood');
     expect(dingRen?.potentialElement).toBe('wood');
     expect(dingRen?.description).toContain('丁壬相合');
 
@@ -641,7 +636,6 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const trumpJiaJi = trump.interactions.find(i => i.type === 'STEM_COMBINATION');
     expect(trumpJiaJi).toBeDefined();
     expect(trumpJiaJi?.stems).toEqual(['甲', '己']);
-    expect(trumpJiaJi?.resultElement).toBe('earth');
     expect(trumpJiaJi?.potentialElement).toBe('earth');
     expect(trumpJiaJi?.pillars).toEqual(['month', 'day', 'hour']);
 

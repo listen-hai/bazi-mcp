@@ -15,7 +15,7 @@ interface InteractionDef {
   type: string;
   branches?: string[];
   stems?: string[];
-  resultElement?: string;
+  potentialElement?: string;
   description: string;
 }
 
@@ -153,7 +153,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
     type: string,
     branches: string[],
     pillarNames: string[],
-    resultElement?: string,
+    potentialElement?: string,
     description?: string,
     transformNote?: string
   ) {
@@ -165,8 +165,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
         type,
         branches,
         pillars: sortPillars(pillarNames),
-        resultElement,
-        potentialElement: resultElement,
+        potentialElement,
         transformed: transformNote ? null : undefined,
         description: description || `${type} (${branches.join('')})`,
         transformNote,
@@ -208,7 +207,6 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
             type: 'STEM_COMBINATION',
             stems: sc.stems,
             pillars: sortPillars(pNames),
-            resultElement: sc.element,
             potentialElement: sc.element,
             transformed: null,
             description: `Stem Combination (${sc.name})`,
