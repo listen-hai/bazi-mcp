@@ -20,11 +20,11 @@ interface InteractionDef {
 }
 
 const STEM_COMBINATIONS: Array<{ stems: [string, string]; element: string; name: string }> = [
-  { stems: ['甲', '己'], element: 'earth', name: '甲己合化土' },
-  { stems: ['乙', '庚'], element: 'metal', name: '乙庚合化金' },
-  { stems: ['丙', '辛'], element: 'water', name: '丙辛合化水' },
-  { stems: ['丁', '壬'], element: 'wood', name: '丁壬合化木' },
-  { stems: ['戊', '癸'], element: 'fire', name: '戊癸合化火' },
+  { stems: ['甲', '己'], element: 'earth', name: '甲己相合' },
+  { stems: ['乙', '庚'], element: 'metal', name: '乙庚相合' },
+  { stems: ['丙', '辛'], element: 'water', name: '丙辛相合' },
+  { stems: ['丁', '壬'], element: 'wood', name: '丁壬相合' },
+  { stems: ['戊', '癸'], element: 'fire', name: '戊癸相合' },
 ];
 
 const TRINES: Array<{ branches: [string, string, string]; element: string; name: string }> = [
@@ -60,12 +60,12 @@ const HALF_TRINES: Array<{ branches: [string, string]; element: string; name: st
 ];
 
 const SIX_COMBINATIONS: Array<{ branches: [string, string]; element: string; name: string }> = [
-  { branches: ['子', '丑'], element: 'earth', name: '子丑六合土' },
-  { branches: ['寅', '亥'], element: 'wood', name: '寅亥六合木' },
-  { branches: ['卯', '戌'], element: 'fire', name: '卯戌六合火' },
-  { branches: ['辰', '酉'], element: 'metal', name: '辰酉六合金' },
-  { branches: ['巳', '申'], element: 'water', name: '巳申六合水' },
-  { branches: ['午', '未'], element: 'earth', name: '午未六合土' },
+  { branches: ['子', '丑'], element: 'earth', name: '子丑六合' },
+  { branches: ['寅', '亥'], element: 'wood', name: '寅亥六合' },
+  { branches: ['卯', '戌'], element: 'fire', name: '卯戌六合' },
+  { branches: ['辰', '酉'], element: 'metal', name: '辰酉六合' },
+  { branches: ['巳', '申'], element: 'water', name: '巳申六合' },
+  { branches: ['午', '未'], element: 'earth', name: '午未六合' },
 ];
 
 const CLASHES: Array<{ branches: [string, string]; name: string }> = [
@@ -149,7 +149,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
     return [...pNames].sort((a, b) => (PILLAR_ORDER[a] ?? 99) - (PILLAR_ORDER[b] ?? 99));
   }
 
-  function addResult(type: string, branches: string[], pillarNames: string[], resultElement?: string, description?: string) {
+  function addResult(
+    type: string,
+    branches: string[],
+    pillarNames: string[],
+    resultElement?: string,
+    description?: string,
+    transformNote?: string
+  ) {
     const sortedBranches = [...branches].sort().join('-');
     const key = `${type}:${sortedBranches}`;
     if (!seen.has(key)) {
@@ -159,7 +166,10 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
         branches,
         pillars: sortPillars(pillarNames),
         resultElement,
+        potentialElement: resultElement,
+        transformed: transformNote ? null : undefined,
         description: description || `${type} (${branches.join('')})`,
+        transformNote,
       });
     }
   }
@@ -199,7 +209,10 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
             stems: sc.stems,
             pillars: sortPillars(pNames),
             resultElement: sc.element,
+            potentialElement: sc.element,
+            transformed: null,
             description: `Stem Combination (${sc.name})`,
+            transformNote: '是否化神需结合月令得气、争合妒合与引化条件综合判定，本服务不作武断判定',
           });
         }
       }
@@ -228,7 +241,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   for (const ht of HALF_TRINES) {
     if (!fullTrineElements.has(ht.element) && ht.branches.every(b => branchMap.has(b))) {
       const pNames = ht.branches.flatMap(b => branchMap.get(b)!);
-      addResult('HALF_TRINE', ht.branches, pNames, ht.element, `Half-Trine (${ht.name})`);
+      addResult(
+        'HALF_TRINE',
+        ht.branches,
+        pNames,
+        ht.element,
+        `Half-Trine (${ht.name})`,
+        '半合/拱合之化气需视月令与透干引化情况'
+      );
     }
   }
 
@@ -236,7 +256,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   for (const sc of SIX_COMBINATIONS) {
     if (sc.branches.every(b => branchMap.has(b))) {
       const pNames = sc.branches.flatMap(b => branchMap.get(b)!);
-      addResult('COMBINATION_2', sc.branches, pNames, sc.element, `Combination (${sc.name})`);
+      addResult(
+        'COMBINATION_2',
+        sc.branches,
+        pNames,
+        sc.element,
+        `Combination (${sc.name})`,
+        '是否化神需结合月令与引化条件综合判定'
+      );
     }
   }
 

@@ -71,7 +71,10 @@ export interface BranchInteractionOutput {
   stems?: string[];
   pillars: string[];
   resultElement?: string;
+  potentialElement?: string;
+  transformed?: boolean | null;
   description: string;
+  transformNote?: string;
 }
 
 export interface DiagnosticsOutput {

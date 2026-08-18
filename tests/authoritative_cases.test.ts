@@ -591,7 +591,9 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(jiaJi).toBeDefined();
     expect(jiaJi?.stems).toEqual(['甲', '己']);
     expect(jiaJi?.resultElement).toBe('earth');
-    expect(jiaJi?.description).toContain('甲己合化土');
+    expect(jiaJi?.potentialElement).toBe('earth');
+    expect(jiaJi?.description).toContain('甲己相合');
+    expect(jiaJi?.transformNote).toBeDefined();
 
     const scYiGeng = detectAllInteractions({
       year: '子', month: '寅', day: '辰', hour: '午',
@@ -601,7 +603,8 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(yiGeng).toBeDefined();
     expect(yiGeng?.stems).toEqual(['乙', '庚']);
     expect(yiGeng?.resultElement).toBe('metal');
-    expect(yiGeng?.description).toContain('乙庚合化金');
+    expect(yiGeng?.potentialElement).toBe('metal');
+    expect(yiGeng?.description).toContain('乙庚相合');
 
     const scBingXin = detectAllInteractions({
       year: '子', month: '寅', day: '辰', hour: '午',
@@ -610,9 +613,11 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     const bingXin = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('丙'));
     const wuGui = scBingXin.find(i => i.type === 'STEM_COMBINATION' && i.stems?.includes('戊'));
     expect(bingXin?.resultElement).toBe('water');
-    expect(bingXin?.description).toContain('丙辛合化水');
+    expect(bingXin?.potentialElement).toBe('water');
+    expect(bingXin?.description).toContain('丙辛相合');
     expect(wuGui?.resultElement).toBe('fire');
-    expect(wuGui?.description).toContain('戊癸合化火');
+    expect(wuGui?.potentialElement).toBe('fire');
+    expect(wuGui?.description).toContain('戊癸相合');
 
     const scDingRen = detectAllInteractions({
       year: '巳', month: '申', day: '卯', hour: '亥',
@@ -622,7 +627,8 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(dingRen).toBeDefined();
     expect(dingRen?.stems).toEqual(['丁', '壬']);
     expect(dingRen?.resultElement).toBe('wood');
-    expect(dingRen?.description).toContain('丁壬合化木');
+    expect(dingRen?.potentialElement).toBe('wood');
+    expect(dingRen?.description).toContain('丁壬相合');
 
     // 2. Full real chart verification (Trump: 丙戌 甲午 己未 己巳)
     const trump = calculateDualAxisBazi({
@@ -636,6 +642,8 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(trumpJiaJi).toBeDefined();
     expect(trumpJiaJi?.stems).toEqual(['甲', '己']);
     expect(trumpJiaJi?.resultElement).toBe('earth');
+    expect(trumpJiaJi?.potentialElement).toBe('earth');
+    expect(trumpJiaJi?.pillars).toEqual(['month', 'day', 'hour']);
   });
 });
 
