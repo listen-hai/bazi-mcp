@@ -327,19 +327,19 @@ describe('Authoritative Real-World Benchmark Suite', () => {
 
   it('Interactions: Full Trine (申子辰三合水局) and Half-Trine (寅午半合火 / 酉丑半合金)', () => {
     const direct1 = detectAllInteractions({ year: '寅', month: '午', day: '丑', hour: '酉' });
-    const types1 = direct1.map(i => `${i.type}:${i.branches.join('')}`);
+    const types1 = direct1.map(i => `${i.type}:${i.branches!.join('')}`);
     expect(types1.includes('HALF_TRINE:寅午')).toBe(true);
     expect(types1.includes('HALF_TRINE:酉丑')).toBe(true);
     expect(types1.includes('HARM:丑午')).toBe(true);
 
     const direct2 = detectAllInteractions({ year: '申', month: '子', day: '辰', hour: '午' });
     expect(direct2.some(i => i.type === 'TRINE' && i.potentialElement === 'water')).toBe(true);
-    expect(direct2.some(i => i.type === 'CLASH' && i.branches.includes('子') && i.branches.includes('午'))).toBe(true);
+    expect(direct2.some(i => i.type === 'CLASH' && i.branches!.includes('子') && i.branches!.includes('午'))).toBe(true);
   });
 
   it('Interactions: Half-Trine (卯未半合木) without full trine', () => {
     const direct = detectAllInteractions({ year: '寅', month: '未', day: '卯', hour: '未' });
-    const halfTrine = direct.find(i => i.type === 'HALF_TRINE' && i.branches.includes('卯') && i.branches.includes('未'));
+    const halfTrine = direct.find(i => i.type === 'HALF_TRINE' && i.branches!.includes('卯') && i.branches!.includes('未'));
     expect(halfTrine).toBeDefined();
     expect(halfTrine?.potentialElement).toBe('wood');
   });
@@ -418,6 +418,43 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     });
     expect(res.fourPillars).toBe('癸未 乙丑 戊戌 甲寅');
     expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('03:26:43');
+  });
+
+  it('FIX1: Moscow 2014-08-01 (before the 2014-10-26 permanent reversion to +3) reports +04:00 with no DST tag', () => {
+    // Russia abolished DST in 2011 and sat on permanent +4 until 2014-10-26. A birth within
+    // ~6 months before that permanent reversion must not be mislabeled as "DST in effect".
+    const res = calculateDualAxisBazi({
+      timezone: 'Europe/Moscow',
+      longitude: 37.6173,
+      solarDate: { year: 2014, month: 8, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.diagnostics.utcOffset).toBe('+04:00');
+    expect(res.diagnostics.utcOffset).not.toContain('DST');
+  });
+
+  it('FIX2: Moscow 2014 lunar (beijing frame) axisB solar-time diagnostic matches the resolved +04:00 offset', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'Europe/Moscow',
+      longitude: 37.6173,
+      lunarDate: { year: 2014, month: 7, day: 6 },
+      lunarDateFrame: 'beijing',
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male',
+    });
+    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('06:24');
+  });
+
+  it('FIX6: Kashgar trueSolar:false warns that a large longitude correction was discarded', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Kashgar',
+      solarDate: { year: 1995, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      trueSolar: false,
+      gender: 'male',
+    });
+    expect(res.diagnostics.warnings.some(w => w.includes('trueSolar') && /-?176/.test(w))).toBe(true);
   });
 
   it('N4 & N6: Sub-minute LMT offset and locationSource reporting', () => {

@@ -85,7 +85,8 @@ function findExact(results: ReturnType<typeof detect>, type: string, members: st
 describe('Interaction correspondence tables', () => {
   it('detects all 5 天干五合 with the correct transformation element', () => {
     for (const [a, b, element] of STEM_COMBINATIONS) {
-      // Branches chosen to be inert so only the stem relation can match.
+      // Filler branches are irrelevant here: findExact filters by type and exact member set,
+      // so any branch relations among them (子辰 half-trine, 寅巳 harm/punishment) don't matter.
       const hit = findExact(detect(['子', '寅', '辰', '巳'], [a, b, '戊', '戊']), 'STEM_COMBINATION', [a, b]);
       expect(hit, `${a}${b}`).toBeDefined();
       expect(hit!.potentialElement, `${a}${b}`).toBe(element);
@@ -128,6 +129,18 @@ describe('Interaction correspondence tables', () => {
     for (const branch of SELF_PUNISHMENTS) {
       expect(findExact(detect([branch, branch, '', '']), 'PUNISHMENT', [branch, branch]), `自刑 ${branch}`).toBeDefined();
     }
+  });
+
+  it('FIX4: a complete 三刑 triple emits exactly one PUNISHMENT entry, not the triple plus its pairwise subsets', () => {
+    const full = detect(['寅', '巳', '申', '子']);
+    const punishments = full.filter(i => i.type === 'PUNISHMENT');
+    expect(punishments.map(p => p.branches?.join('')).sort()).toEqual(['寅巳申']);
+  });
+
+  it('FIX4: a pairwise 相刑 still fires when the third branch of its triple is absent', () => {
+    const partial = detect(['寅', '巳', '丑', '酉']);
+    const punishments = partial.filter(i => i.type === 'PUNISHMENT');
+    expect(punishments.map(p => p.branches?.join('')).sort()).toEqual(['寅巳']);
   });
 
   it('reports no two-branch relation outside the classical tables', () => {

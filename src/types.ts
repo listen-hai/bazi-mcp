@@ -24,7 +24,7 @@ export interface PillarOutput {
   element: string;
   stemTenGod?: string;
   branchTenGod?: string;
-  hiddenStems?: Array<{
+  hiddenStems: Array<{
     stem: string;
     element: string;
     tenGod: string;

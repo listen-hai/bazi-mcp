@@ -304,6 +304,11 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
   }
 
   // 8. 相刑 (Punishments)
+  // Full triple punishments (寅巳申, 丑戌未) whose branches are all present are tracked here so
+  // their pairwise subsets (寅巳/巳申/寅申, 丑戌/戌未/丑未) are suppressed once the triple already
+  // fired — otherwise a complete triple emits 4 entries (the triple + all 3 pairs) instead of 1.
+  // A pair still fires normally when the third branch is absent.
+  const firedTriplePunishments: Set<string>[] = [];
   for (const pun of PUNISHMENTS) {
     if (pun.isSelf) {
       const b = pun.branches[0];
@@ -315,10 +320,14 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
       if (pun.branches.every(b => branchMap.has(b))) {
         const pNames = pun.branches.flatMap(b => branchMap.get(b)!);
         addResult('PUNISHMENT', pun.branches, pNames, undefined, `Punishment (${pun.name})`);
+        firedTriplePunishments.push(new Set(pun.branches));
       }
     } else if (pun.branches.length === 2) {
-      // 2-branch punishment
-      if (pun.branches.every(b => branchMap.has(b))) {
+      // 2-branch punishment (skip if it's a subset of an already-fired triple punishment)
+      const isSubsetOfFiredTriple = firedTriplePunishments.some(triple =>
+        pun.branches.every(b => triple.has(b))
+      );
+      if (!isSubsetOfFiredTriple && pun.branches.every(b => branchMap.has(b))) {
         const pNames = pun.branches.flatMap(b => branchMap.get(b)!);
         addResult('PUNISHMENT', pun.branches, pNames, undefined, `Punishment (${pun.name})`);
       }

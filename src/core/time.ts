@@ -43,17 +43,31 @@ export function tzOffsetMinutes(instantMs: number, tz: string): number {
 
 /**
  * Returns the standard (non-DST) offset in minutes around a given instant by sampling
- * 13 monthly points (±6 months) around the instant.
- * This guarantees immunity to mid-year base timezone changes (e.g. Moscow 1922, Phoenix 1944 War Time).
+ * monthly points up to 12 months before and 12 months after the instant.
+ * Takes max(min over the backward half-window, min over the forward half-window) rather
+ * than a single global min: a permanent offset shift is monotonic, so the two half-window
+ * minima differ and the max picks whichever offset is actually in force at the instant.
+ * Each half-window must span a full annual cycle (12 months, not 6): DST seasons can run
+ * well over 6 months (US Central time is in DST ~8 months/year), so a pivot early in such
+ * a season would have a 6-month forward window that never reaches standard time again,
+ * wrongly reporting the DST offset itself as "standard". A 12-month half-window guarantees
+ * both sides observe at least one full annual cycle and therefore see real standard time,
+ * while a genuine permanent shift (e.g. Moscow 2011-2014) still resolves correctly since the
+ * near side of the pivot keeps returning the offset actually in force there regardless of
+ * how far the window reaches on the far side. This also stays immune to mid-year base
+ * timezone changes (e.g. Moscow 1922, Phoenix 1944 War Time).
  */
 export function getStandardOffsetMinutes(instantMs: number, tz: string): number {
-  let minOffset = tzOffsetMs(instantMs, tz) / 60000;
-  for (let i = -6; i <= 6; i++) {
-    const sampleMs = instantMs + i * 30 * 86400000;
-    const off = tzOffsetMs(sampleMs, tz) / 60000;
-    if (off < minOffset) minOffset = off;
+  const base = tzOffsetMs(instantMs, tz) / 60000;
+  let minBackward = base;
+  let minForward = base;
+  for (let i = 1; i <= 12; i++) {
+    const backOff = tzOffsetMs(instantMs - i * 30 * 86400000, tz) / 60000;
+    if (backOff < minBackward) minBackward = backOff;
+    const fwdOff = tzOffsetMs(instantMs + i * 30 * 86400000, tz) / 60000;
+    if (fwdOff < minForward) minForward = fwdOff;
   }
-  return minOffset;
+  return Math.max(minBackward, minForward);
 }
 
 /**

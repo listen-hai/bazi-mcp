@@ -112,9 +112,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   let instant: number;
   let offsetMinutes: number;
   let isDst: boolean;
-  // Set only when the local wall clock had more than one UTC candidate (a DST
-  // fall-back fold); carries the already-resolved offset through to Axis B (FIX 1).
-  let localFoldOffsetMinutes: number | undefined;
   let lunarDiag: DiagnosticsOutput['lunar'] = undefined;
 
   // Determine clock time (hour, minute)
@@ -212,7 +209,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       instant = wRes.instant;
       offsetMinutes = wRes.offsetMinutes;
       isDst = wRes.isDst;
-      if (wRes.candidates) localFoldOffsetMinutes = wRes.offsetMinutes;
 
       beijingWall = instantToWall(instant, 'Asia/Shanghai');
     } else {
@@ -231,9 +227,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
       localWall = instantToWall(instant, loc.timezone);
       offsetMinutes = tzOffsetMinutes(instant, loc.timezone);
-      const janOffset = tzOffsetMinutes(Date.UTC(localWall.year, 0, 15, 12, 0), loc.timezone);
-      const julOffset = tzOffsetMinutes(Date.UTC(localWall.year, 6, 15, 12, 0), loc.timezone);
-      isDst = offsetMinutes > Math.min(janOffset, julOffset);
+      isDst = offsetMinutes > getStandardOffsetMinutes(instant, loc.timezone);
     }
 
     const localSolarStr = `${localWall.year}-${String(localWall.month).padStart(2, '0')}-${String(localWall.day).padStart(2, '0')}`;
@@ -268,7 +262,6 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     instant = wRes.instant;
     offsetMinutes = wRes.offsetMinutes;
     isDst = wRes.isDst;
-    if (wRes.candidates) localFoldOffsetMinutes = wRes.offsetMinutes;
 
     beijingWall = instantToWall(instant, 'Asia/Shanghai');
   } else {
@@ -281,6 +274,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   // time — two zones sharing the same UTC offset at this instant (e.g. the
   // Guajará-Mirim/Brazil overlap) is not a real ambiguity and gets no warning.
   let tzAmbiguityDiag: DiagnosticsOutput['timezoneResolution'] = undefined;
+  let xinjiangNoteEmitted = false;
   if (loc.alternateTimezones && loc.alternateTimezones.length > 0) {
     const baseOffset = tzOffsetMinutes(instant, loc.timezone);
     const genuineAlts = loc.alternateTimezones.filter(
@@ -293,6 +287,7 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       let note = `The birth coordinates fall inside more than one timezone boundary: ${[loc.timezone, ...genuineAlts].join(', ')}; this chart was calculated using "${loc.timezone}" (up to ${diffHours} hours different from the alternate candidates). To use a different timezone, explicitly pass the \`timezone\` parameter.`;
       if (loc.timezone === 'Asia/Shanghai' && genuineAlts.includes('Asia/Urumqi')) {
         note += ' The birth place is in Xinjiang: mainland China has used Beijing time as its single civil time zone since 1949, but some Xinjiang households still record birth times in Xinjiang local time (UTC+6, 2 hours behind Beijing time); if the birth was recorded in local time, pass `timezone: "Asia/Urumqi"`.';
+        xinjiangNoteEmitted = true;
       }
       tzAmbiguityDiag = {
         used: loc.timezone,
@@ -317,7 +312,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   if (loc.timezone === 'Asia/Shanghai') {
     const isResolvedXinjiang = loc.province?.includes('Xinjiang') || loc.alternateTimezones?.includes('Asia/Urumqi');
     if (isResolvedXinjiang) {
-      warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
+      if (!xinjiangNoteEmitted) {
+        warnings.push('Birth place is in Xinjiang region. While civil records standardise on Beijing Time (UTC+8), local oral records may use Xinjiang Time (UTC+6). If input clock time was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
+      }
     } else if (!input.place && loc.longitude >= 73.5 && loc.longitude <= 96.4 && (loc.latitude ?? 40) >= 36.5 && (loc.latitude ?? 40) <= 49.2) {
       warnings.push('The coordinates fall in Western China (near Xinjiang border). While civil records standardise on Beijing Time (UTC+8), local oral records in Xinjiang may use Xinjiang Time (UTC+6). If the birth was recorded in Xinjiang local time, pass explicit `timezone: "Asia/Urumqi"`.');
     }
@@ -389,6 +386,12 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   if (Math.abs(solarTimeDetail.longitudeCorrectionMinutes) > 240) {
     warnings.push(
       `Astronomical sanity warning: longitude correction (${solarTimeDetail.longitudeCorrectionMinutes.toFixed(1)} min) exceeds ±240 minutes relative to the timezone standard meridian (${loc.timezone}). Please verify that the specified longitude and timezone belong to the same geographic region.`
+    );
+  }
+
+  if (!enableTrueSolar && Math.abs(solarTimeDetail.longitudeCorrectionMinutes) > 30) {
+    warnings.push(
+      `trueSolar is set to false: a longitude correction of ${solarTimeDetail.longitudeCorrectionMinutes.toFixed(1)} minutes was NOT applied; the hour pillar (and possibly the day pillar) may differ from a true-solar-time chart.`
     );
   }
 

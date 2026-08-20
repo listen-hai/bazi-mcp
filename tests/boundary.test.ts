@@ -2,6 +2,7 @@ import { describe, it, expect, test } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 import { resolveLocation, lookupCity } from '../src/geo/resolver';
 import { BaziInputSchema } from '../src/schemas/input';
+import { getStandardOffsetMinutes } from '../src/core/time';
 
 describe('8.5 Boundary, DST & Edge Case Tests', () => {
   // 1. DST spring-forward nonexistent clock time
@@ -241,7 +242,7 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(result.diagnostics.utcOffset).toBeDefined();
   });
 
-  it('Should handle sect=1 (default 00:00 boundary) vs sect=2 (23:00 boundary) for late Zi hour', () => {
+  it('Should handle sect=1 (00:00 boundary) vs sect=2 (23:00 boundary, default) for late Zi hour', () => {
     const date = { year: 2024, month: 5, day: 10 };
     const time = { hour: 23, minute: 30 };
 
@@ -422,5 +423,26 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(result.diagnostics.wallClock).toContain('America/Porto_Velho');
     expect(result.diagnostics.timezoneResolution).toBeUndefined();
     expect(result.diagnostics.warnings).toEqual([]);
+  });
+
+  // 17. getStandardOffsetMinutes: direct unit coverage for the offset-classification
+  // helper that both axes rely on (FIX 1 / FIX 2).
+  describe('getStandardOffsetMinutes', () => {
+    it('a real-DST zone mid-season (America/Chicago, 2024-05-01) reports standard time, not the DST offset in effect', () => {
+      // Chicago is on CDT (-05:00 = -300 min) at this instant; standard (winter) is -06:00.
+      const instant = Date.UTC(2024, 4, 1, 15, 0, 0);
+      expect(getStandardOffsetMinutes(instant, 'America/Chicago')).toBe(-360);
+    });
+
+    it('a permanent-shift zone (Europe/Moscow, 2014-08-01, before the 2014-10-26 reversion) reports the offset actually in force, not a future permanent change', () => {
+      // Russia was on permanent +4 (no DST) from 2011 until reverting to permanent +3 on 2014-10-26.
+      const instant = Date.UTC(2014, 7, 1, 8, 0, 0);
+      expect(getStandardOffsetMinutes(instant, 'Europe/Moscow')).toBe(240);
+    });
+
+    it('a no-DST zone (Asia/Shanghai, 2024-05-01) reports the same offset as the actual instant', () => {
+      const instant = Date.UTC(2024, 4, 1, 4, 0, 0);
+      expect(getStandardOffsetMinutes(instant, 'Asia/Shanghai')).toBe(480);
+    });
   });
 });
