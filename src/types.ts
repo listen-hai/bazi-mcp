@@ -138,7 +138,6 @@ export interface BaziCalculationResult {
   };
   daYun: DaYunOutput;
   interactions: BranchInteractionOutput[];
-  shenSha?: Record<string, string[]>;
   diagnostics: DiagnosticsOutput;
 }
 

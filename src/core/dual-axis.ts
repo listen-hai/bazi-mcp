@@ -414,6 +414,16 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   const B = axisBChart(axisBWall, standardOffsetHours, axisBEnableTST);
 
   // Extract Solar Time details via @openfate/true-solar-time using standard offset + DST offset
+  //
+  // Antimeridian convention: for a birth near the antimeridian (e.g. Chatham
+  // Islands, longitude ~-176.5 at UTC+12:45), the underlying true-solar-time
+  // library wraps the longitude correction by 360° (so an unwrapped
+  // ~-1471 minute correction against the standard meridian comes back as
+  // ~-31), rather than shifting the sub-solar date a full day. The day
+  // pillar therefore follows the civil date at the birth location, not the
+  // (much earlier) sub-solar date. This is a deliberate, if
+  // undocumented-upstream, convention -- not a bug -- and matches what
+  // other implementations do in practice.
   const solarTimeDetail = calculateTrueSolarTime(
     {
       year: localWall.year,
@@ -446,32 +456,45 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     const samplePoints = getShichenSamplePoints(input.shichen);
     const candidateHourPillars = new Set<string>();
 
+    // A gap (spring-forward) and a fold (fall-back) both make a bare sample
+    // point throw, but they mean opposite things: a gap wall time doesn't
+    // exist, so skipping is correct; a fold wall time exists twice, so
+    // skipping would silently drop exactly the candidate this block exists
+    // to enumerate. If the caller already disambiguated via `input.dstFold`,
+    // honor that and sample only the occurrence they meant. Otherwise, try
+    // both fold occurrences for each sample point: `wallToInstant` ignores
+    // `dstFold` whenever there's only one candidate (ordinary day, or a
+    // gap), so this is a no-op there and the `Set` below dedupes; on a fold
+    // it yields both hour pillars.
+    const foldsToTry: Array<0 | 1 | undefined> =
+      input.dstFold !== undefined ? [input.dstFold] : [0, 1];
+
     for (const pt of samplePoints) {
-      try {
-        // Throws on a DST gap (nonexistent wall time); the catch below then
-        // skips this sample point entirely.
-        const sampleWRes = wallToInstant(
-          {
-            year: localWall.year,
-            month: localWall.month,
-            day: localWall.day,
-            hour: pt.hour,
-            minute: pt.minute,
-          },
-          loc.timezone,
-          input.dstFold
-        );
+      for (const fold of foldsToTry) {
+        try {
+          const sampleWRes = wallToInstant(
+            {
+              year: localWall.year,
+              month: localWall.month,
+              day: localWall.day,
+              hour: pt.hour,
+              minute: pt.minute,
+            },
+            loc.timezone,
+            fold
+          );
 
-        const sampleStdOffsetMinutes = getStandardOffsetMinutes(sampleWRes.instant, loc.timezone);
-        const sampleStdWall = toUTCWall(sampleWRes.instant + sampleStdOffsetMinutes * 60000);
-        const sampleResolved = resolveAxisBWall(sampleStdWall, sampleStdOffsetMinutes / 60);
-        const sampleB = axisBChart(sampleResolved.wall, sampleStdOffsetMinutes / 60, sampleResolved.enableTST);
+          const sampleStdOffsetMinutes = getStandardOffsetMinutes(sampleWRes.instant, loc.timezone);
+          const sampleStdWall = toUTCWall(sampleWRes.instant + sampleStdOffsetMinutes * 60000);
+          const sampleResolved = resolveAxisBWall(sampleStdWall, sampleStdOffsetMinutes / 60);
+          const sampleB = axisBChart(sampleResolved.wall, sampleStdOffsetMinutes / 60, sampleResolved.enableTST);
 
-        if (sampleB.pillars.hour) {
-          candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
+          if (sampleB.pillars.hour) {
+            candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
+          }
+        } catch {
+          // Gap: this occurrence doesn't exist, skip it.
         }
-      } catch {
-        // ignore
       }
     }
 

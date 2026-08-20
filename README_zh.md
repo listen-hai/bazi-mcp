@@ -108,19 +108,19 @@ bazi-mcp
 ## 🛠️ MCP 工具接口规范
 
 ### 1. `calculate_bazi`（高精度八字排盘）
-计算完整四柱、日主五行阴阳、大运流程（标明虚岁）、天干五合与地支刑冲合会、神煞与诊断元数据。
+计算完整四柱、日主五行阴阳、大运流程（标明虚岁）、天干五合与地支刑冲合会，以及诊断元数据。
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `place` | string | 可选 | 城市英文名称（如 `"Beijing"`、`"New York"`、`"Tacoma, WA"`、`"London, United Kingdom"`）。AI Agent 会自动翻译用户的任意语言输入。 |
-| `longitude` | number | 可选 | 出生地经度（东经为正，如 `102.8329`，西经为负，如 `-122.4443`。*跨日界线地点如 Chatham 群岛请在 [-180, 180] 范围内传值如 `-176.55`*）。 |
+| `longitude` | number | 可选 | 出生地经度（东经为正，如 `102.8329`，西经为负，如 `-122.4443`。*跨日界线地点如 Chatham 群岛请在 [-180, 180] 范围内传值如 `-176.55`*）。*对靠近对向子午线（antimeridian）的出生地，底层真太阳时修正按 360° 折算，因此日柱仍按出生地**民用日期**计算，即使真太阳对应的日期已提前一整天——这是既定约定，并非缺陷。* |
 | `timezone` | string | 可选 | 官方 IANA 时区名称（如 `"Asia/Shanghai"`、`"America/Los_Angeles"`） |
 | `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1990, "month": 1, "day": 1 }`（支持范围：1800–2100） |
 | `lunarDate` | object | 二选一* | 农历出生日期 `{ "year": 1989, "month": 12, "day": 5, "isLeapMonth": false }`（支持范围：1800–2100） |
 | `lunarDateFrame` | string | 可选 | 农历时区基准：`"local"`（默认，按当地公历日对应农历）或 `"beijing"` |
 | `clockTime` | object | 三选一** | 钟表出生时刻 `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | 三选一** | 传统十二时辰分支（`'子'` 至 `'亥'`） |
-| `timeUnknown` | boolean | 三选一** | 时辰未知（传 `true` 排三柱盘，时柱及相关神煞置 `null`） |
+| `timeUnknown` | boolean | 三选一** | 时辰未知（传 `true` 排三柱盘，时柱置 `null`） |
 | `dstFold` | number | 可选 | 秋季夏令时折返重叠消歧：`0`（夏令时）或 `1`（标准时） |
 | `gender` | string | **必填** | `"male"`（乾造/男）或 `"female"`（坤造/女） |
 | `sect` | number | 可选 | 早晚子时口径：`2`（默认，23:00 子初换日，五鼠遁自洽）或 `1`（00:00 子正换日） |

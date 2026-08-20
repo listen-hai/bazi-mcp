@@ -104,7 +104,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"Lagos"`, `"London, United Kingdom"`). AI agents automatically translate any user language. |
-| `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`). *Note for Date Line locations (e.g. Chatham Islands): express longitude in [-180, 180] (e.g. `-176.55` in `UTC+12:45`), normalized against the standard time meridian.* |
+| `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`). *Note for Date Line locations (e.g. Chatham Islands): express longitude in [-180, 180] (e.g. `-176.55` in `UTC+12:45`), normalized against the standard time meridian.* *For births near the antimeridian, the underlying true-solar-time correction wraps by 360°, so the day pillar follows the **civil** date at the birth location even though the sub-solar date is a full day earlier — this is a deliberate convention, not a bug.* |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
 | `solarDate` | object | Optional* | Solar birth date `{ "year": 1990, "month": 1, "day": 1 }` (supported: 1800–2100) |
 | `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1989, "month": 12, "day": 5, "isLeapMonth": false }` (supported: 1800–2100) |

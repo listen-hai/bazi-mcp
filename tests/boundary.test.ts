@@ -163,6 +163,53 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(res.diagnostics.warnings.some(w => w.includes('spring-forward gap'))).toBe(true);
   });
 
+  // 丑 spans 01:00-02:59; on this date LA's clocks fell back from 02:00 to
+  // 01:00, so 01:00-01:59 occurred twice. The ambiguity block must sample
+  // both fold occurrences and report all three genuine candidate hour
+  // pillars (FIX 1) instead of silently dropping the fold occurrence like a
+  // DST gap.
+  it('Should enumerate all three candidates across a shichen that contains a DST fall-back fold', () => {
+    const res = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 1990, month: 10, day: 28 },
+      shichen: '丑',
+      gender: 'male',
+    });
+    expect(res.diagnostics.shichenAmbiguity?.isAmbiguous).toBe(true);
+    expect(res.diagnostics.shichenAmbiguity?.candidateHourPillars.sort()).toEqual(
+      ['戊子', '己丑', '庚寅'].sort()
+    );
+  });
+
+  // When the caller has already disambiguated the fold with `dstFold`, only
+  // that occurrence should be sampled -- not both.
+  it('Should sample only the disambiguated fold occurrence when dstFold is supplied', () => {
+    const resFold0 = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 1990, month: 10, day: 28 },
+      shichen: '丑',
+      gender: 'male',
+      dstFold: 0,
+    });
+    expect(resFold0.diagnostics.shichenAmbiguity?.candidateHourPillars.sort()).toEqual(
+      ['戊子', '己丑', '庚寅'].sort()
+    );
+
+    const resFold1 = calculateDualAxisBazi({
+      timezone: 'America/Los_Angeles',
+      longitude: -122.4443,
+      solarDate: { year: 1990, month: 10, day: 28 },
+      shichen: '丑',
+      gender: 'male',
+      dstFold: 1,
+    });
+    expect(resFold1.diagnostics.shichenAmbiguity?.candidateHourPillars.sort()).toEqual(
+      ['己丑', '庚寅'].sort()
+    );
+  });
+
   // 8. Pre-1901 China historical timezone note
   it('Should add warning for pre-1901 China dates', () => {
     const res = calculateDualAxisBazi({
@@ -294,6 +341,12 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
       gender: 'female'
     });
     expect(result.diagnostics.wallClock).toContain('Pacific/Chatham');
+    // Change-detector pinning the antimeridian convention documented in
+    // dual-axis.ts (near `calculateTrueSolarTime`) and in both READMEs: the
+    // day pillar follows the civil date, not an independently verified
+    // classical result. If this ever flips under a dependency upgrade, that
+    // convention is what changed.
+    expect(result.fourPillars).toBe('癸卯 甲子 甲子 己巳');
   });
 
   test('Line Islands: Kiribati (UTC+14, jumped date line in 1994)', () => {
@@ -306,6 +359,10 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
       gender: 'male'
     });
     expect(result.diagnostics.wallClock).toContain('Pacific/Kiritimati');
+    // Change-detector pinning the antimeridian convention (see the Chatham
+    // case above and dual-axis.ts) -- not an independently verified
+    // classical result.
+    expect(result.fourPillars).toBe('己卯 丙子 戊午 戊午');
   });
 
   test('Fractional offset: Nepal (UTC+5:45)', () => {

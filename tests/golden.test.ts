@@ -19,6 +19,26 @@ describe('8.1 Golden Test Suite', () => {
     expect(res.pillars.hour?.ganZhi).toBe('辛未');
     expect(res.diagnostics.convention.ageBasis).toBe('nominal');
     expect(res.daYun.startAgeNominal).toBeGreaterThanOrEqual(1);
+
+    // Pin the Da Yun onset semantics themselves, not just that a positive
+    // age was reported. Three fields describe the same onset from three
+    // different angles, and they are NOT interchangeable:
+    // - `startOffset` is the precise elapsed interval from birth to onset
+    //   (years/months/days/hours) -- here 2y 6m 0d 0h, i.e. a true age of
+    //   2.5 years at onset (birth 1998-07-31 -> onset 2001-01-31).
+    // - `startAgeInWholeYears` is a calendar-year difference (onset
+    //   startYear minus birth year: 2001 - 1998 = 3), NOT floor(true age).
+    //   Because the onset month (January) falls earlier in the calendar
+    //   year than the birth month (July), the calendar-year count (3) is
+    //   one more than the floored true age (2) even though only 2.5 years
+    //   actually elapsed -- this is exactly why it was renamed from
+    //   `startAgeExact`, which overstated its precision.
+    // - `startAgeNominal` is 虚岁 (nominal age): the whole-year count + 1,
+    //   since the birth year itself counts as age 1.
+    expect(res.daYun.startOffset).toEqual({ years: 2, months: 6, days: 0, hours: 0 });
+    expect(res.daYun.startYear).toBe(2001);
+    expect(res.daYun.cycles[0].startAgeInWholeYears).toBe(3);
+    expect(res.daYun.cycles[0].startAgeNominal).toBe(4);
   });
 
   // G2: 2024-02-04 08:00, America/Los_Angeles, -122.4443 -> 甲辰 丙寅 戊戌 丙辰
@@ -148,5 +168,90 @@ describe('8.1 Golden Test Suite', () => {
     expect(lunar.fourPillars).toBe(solar.fourPillars);
     expect(lunar.diagnostics.utcInstant).toBe(solar.diagnostics.utcInstant);
     expect(solar.diagnostics.utcInstant).toBe('1988-06-30T22:20:00.000Z');
+  });
+});
+
+describe('8.1b Full-output shape snapshot', () => {
+  // Full-structure change-detector: catches a field silently appearing or
+  // disappearing (e.g. across a rename like the recent resultElement ->
+  // potentialElement / startAgeExact -> startAgeInWholeYears migrations).
+  // Asserts key sets only, not values -- value changes are covered by the
+  // other golden/boundary tests.
+  //
+  // Uses G1 (deterministic, no warnings, caller-supplied unambiguous
+  // location/timezone) so the optional diagnostic blocks are in a known
+  // state:
+  // - `diagnostics.lunar`, `.shichenAmbiguity`, `.timezoneResolution` keys
+  //   are present but hold `undefined` (no lunarDate/shichen input given,
+  //   and the coordinates fall inside exactly one timezone boundary).
+  // - `diagnostics.historicalTzApprox` is present and `false` (post-1901,
+  //   on a modern 15-minute-aligned meridian).
+  // - `diagnostics.locationSource` is `"caller_supplied"` (longitude +
+  //   timezone given directly, no `place` lookup).
+  it('G1 exposes exactly the expected top-level, diagnostics, pillar, and daYun-cycle keys', () => {
+    const res = calculateDualAxisBazi({
+      solarDate: { year: 1998, month: 7, day: 31 },
+      clockTime: { hour: 14, minute: 10 },
+      timezone: 'Asia/Shanghai',
+      longitude: 116.4074,
+      gender: 'male',
+    });
+
+    expect(res.diagnostics.warnings).toEqual([]);
+
+    expect(Object.keys(res).sort()).toEqual(
+      ['daYun', 'dayMaster', 'diagnostics', 'fourPillars', 'interactions', 'pillars'].sort()
+    );
+
+    expect(Object.keys(res.diagnostics).sort()).toEqual(
+      [
+        'axisA_beijingWallClock_yearMonthPillars',
+        'axisB_localSolarTime_dayHourPillars',
+        'convention',
+        'engineInfo',
+        'equationOfTimeMinutes',
+        'historicalTzApprox',
+        'locationSource',
+        'longitudeCorrectionMinutes',
+        'lunar',
+        'shichenAmbiguity',
+        'timezoneResolution',
+        'utcInstant',
+        'utcOffset',
+        'wallClock',
+        'warnings',
+      ].sort()
+    );
+
+    expect(Object.keys(res.pillars.year).sort()).toEqual(
+      [
+        'branch',
+        'branchTenGod',
+        'element',
+        'ganZhi',
+        'hiddenStems',
+        'naYin',
+        'stem',
+        'stemTenGod',
+        'voidBranches',
+        'xun',
+      ].sort()
+    );
+
+    expect(Object.keys(res.daYun.cycles[0]).sort()).toEqual(
+      [
+        'branch',
+        'branchTenGod',
+        'endAgeNominal',
+        'endYear',
+        'ganZhi',
+        'index',
+        'startAgeInWholeYears',
+        'startAgeNominal',
+        'startYear',
+        'stem',
+        'stemTenGod',
+      ].sort()
+    );
   });
 });
