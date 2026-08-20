@@ -213,4 +213,67 @@ describe('Interaction correspondence tables', () => {
     for (const [a, b, , stem] of HALF_TRINES_WITHOUT_CARDINAL) inspect(detect([a, b, '', ''], [stem, '戊', '戊', '戊']));
     expect(checked.size).toBeGreaterThan(50);
   });
+  /**
+   * The description strings are the only part of an interaction a reading model
+   * is likely to quote verbatim to a user, and nothing asserted them, so a typo
+   * in a classical term — 三合水局 written as 三合火局 — would ship while
+   * potentialElement stayed correct and every other test passed.
+   */
+  it('describes each interaction with its members and, where named, the right element', () => {
+    const ELEMENT_CHARACTER: Record<string, string> = {
+      water: '水', wood: '木', fire: '火', earth: '土', metal: '金',
+    };
+    const ALL_ELEMENT_CHARACTERS = Object.values(ELEMENT_CHARACTER);
+
+    const inspected = new Set<string>();
+    const check = (results: ReturnType<typeof detect>) => {
+      for (const r of results) {
+        const members = r.branches ?? r.stems ?? [];
+        const key = `${r.type}:${members.join('')}`;
+        if (inspected.has(key)) continue;
+        inspected.add(key);
+
+        // Every participating branch or stem must appear in the text.
+        for (const member of members) {
+          expect(r.description, key).toContain(member);
+        }
+
+        // Where the text names an element it must be the one reported. Six
+        // combinations and stem combinations deliberately name no element, so
+        // they are skipped rather than forced into a shape they do not have.
+        const named = ALL_ELEMENT_CHARACTERS.filter(c => r.description.includes(c));
+        if (named.length > 0) {
+          expect(r.potentialElement, key).toBeTruthy();
+          expect(named, key).toEqual([ELEMENT_CHARACTER[r.potentialElement!]]);
+        }
+      }
+    };
+
+    for (const a of BRANCHES) for (const b of BRANCHES) for (const c of BRANCHES) {
+      check(detect([a, b, c, '']));
+    }
+    for (const [a, b] of STEM_COMBINATIONS) check(detect(['子', '寅', '辰', '巳'], [a, b, '戊', '戊']));
+    for (const [a, b, , stem] of HALF_TRINES_WITHOUT_CARDINAL) check(detect([a, b, '', ''], [stem, '戊', '戊']));
+
+    expect(inspected.size).toBeGreaterThan(60);
+  });
+
+  it('pins one description per interaction type', () => {
+    // A change detector: these are the exact strings a model may quote.
+    const cases: Array<[string, ReturnType<typeof detect>]> = [
+      ['Trine (申子辰三合水局)', detect(['申', '子', '辰', ''])],
+      ['Directional (寅卯辰三会东方木)', detect(['寅', '卯', '辰', ''])],
+      ['Half-Trine (申子半合水)', detect(['申', '子', '', ''])],
+      ['Combination (子丑六合)', detect(['子', '丑', '', ''])],
+      ['Clash (子午相冲)', detect(['子', '午', '', ''])],
+      ['Harm (子未相害)', detect(['子', '未', '', ''])],
+      ['Destruction (子酉相破)', detect(['子', '酉', '', ''])],
+      ['Punishment (寅巳申三刑 (无恩之刑))', detect(['寅', '巳', '申', ''])],
+      ['Gong-He (申辰拱合水)', detect(['申', '辰', '', ''], ['壬', '戊', '戊'])],
+      ['Stem Combination (甲己相合)', detect(['子', '寅', '辰', '巳'], ['甲', '己', '戊', '戊'])],
+    ];
+    for (const [expected, results] of cases) {
+      expect(results.map(r => r.description), expected).toContain(expected);
+    }
+  });
 });
