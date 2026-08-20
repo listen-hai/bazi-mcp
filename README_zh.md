@@ -55,7 +55,7 @@ bunx @lhk714/bazi-mcp
 
 ### 方式 2：使用 Node.js / NPX 运行
 ```bash
-npx -y @lhk714/bazi-mcp
+npx -y @lhk714/bazi-mcp@latest
 ```
 
 ### 方式 3：全局安装使用
@@ -64,7 +64,7 @@ npx -y @lhk714/bazi-mcp
 bun add -g @lhk714/bazi-mcp
 
 # 或通过 NPM 全局安装
-npm install -g @lhk714/bazi-mcp
+npm install -g @lhk714/bazi-mcp@latest
 
 # 随后在任意终端直接运行：
 bazi-mcp
@@ -85,7 +85,7 @@ bazi-mcp
   "mcpServers": {
     "bazi": {
       "command": "bunx",
-      "args": ["@lhk714/bazi-mcp"]
+      "args": ["@lhk714/bazi-mcp@latest"]
     }
   }
 }
@@ -97,7 +97,7 @@ bazi-mcp
   "mcpServers": {
     "bazi": {
       "command": "npx",
-      "args": ["-y", "@lhk714/bazi-mcp"]
+      "args": ["-y", "@lhk714/bazi-mcp@latest"]
     }
   }
 }

@@ -49,7 +49,7 @@ bunx @lhk714/bazi-mcp
 
 ### Option 2: Instant execution with Node.js (`npx`)
 ```bash
-npx -y @lhk714/bazi-mcp
+npx -y @lhk714/bazi-mcp@latest
 ```
 
 ### Option 3: Global Installation
@@ -58,7 +58,7 @@ npx -y @lhk714/bazi-mcp
 bun add -g @lhk714/bazi-mcp
 
 # Or install globally via NPM
-npm install -g @lhk714/bazi-mcp
+npm install -g @lhk714/bazi-mcp@latest
 
 # Then run anywhere:
 bazi-mcp
@@ -76,7 +76,7 @@ Add `@lhk714/bazi-mcp` to your MCP client config (e.g. Claude Desktop, Cursor, C
   "mcpServers": {
     "bazi": {
       "command": "bunx",
-      "args": ["@lhk714/bazi-mcp"]
+      "args": ["@lhk714/bazi-mcp@latest"]
     }
   }
 }
@@ -88,7 +88,7 @@ Add `@lhk714/bazi-mcp` to your MCP client config (e.g. Claude Desktop, Cursor, C
   "mcpServers": {
     "bazi": {
       "command": "npx",
-      "args": ["-y", "@lhk714/bazi-mcp"]
+      "args": ["-y", "@lhk714/bazi-mcp@latest"]
     }
   }
 }
