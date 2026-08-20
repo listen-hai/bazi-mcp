@@ -33,13 +33,15 @@ const HALF_TRINES_WITH_CARDINAL: Array<[string, string, string]> = [
   ['寅', '午', 'fire'], ['午', '戌', 'fire'], ['巳', '酉', 'metal'], ['酉', '丑', 'metal'],
 ];
 /**
- * The remaining trine pairs, which lack the cardinal branch. Most classical
- * texts treat these as 拱合 rather than 半合 and do not grant them the element.
- * This implementation does report them; the assertion below pins that as a
- * deliberate doctrinal choice so it cannot change silently.
+ * The remaining trine pairs, which lack the cardinal branch (中神/旺支) of their trine.
+ * Mainstream doctrine holds these do not combine on their own - they only form 拱合
+ * when their element is transparent among the stems (透干), and are weaker than a
+ * proper 半合 even then. With no stems supplied (as in the sweep below) they produce
+ * no interaction at all, so they are exercised separately in the GONG_HE test below
+ * rather than folded into the no-false-positive sweep's expected set.
  */
-const HALF_TRINES_WITHOUT_CARDINAL: Array<[string, string, string]> = [
-  ['申', '辰', 'water'], ['亥', '未', 'wood'], ['寅', '戌', 'fire'], ['巳', '丑', 'metal'],
+const HALF_TRINES_WITHOUT_CARDINAL: Array<[string, string, string, string]> = [
+  ['申', '辰', 'water', '壬'], ['亥', '未', 'wood', '甲'], ['寅', '戌', 'fire', '丙'], ['巳', '丑', 'metal', '庚'],
 ];
 const SIX_COMBINATIONS: Array<[string, string, string]> = [
   ['子', '丑', 'earth'], ['寅', '亥', 'wood'], ['卯', '戌', 'fire'],
@@ -63,7 +65,7 @@ const PUNISHMENT_PAIRS: Array<[string, string]> = [
 const SELF_PUNISHMENTS = ['辰', '午', '酉', '亥'];
 
 /** Interaction types that form an element, and therefore carry the v2.1 transformation fields. */
-const COMBINING_TYPES = ['TRINE', 'DIRECTIONAL', 'HALF_TRINE', 'COMBINATION_2', 'STEM_COMBINATION'];
+const COMBINING_TYPES = ['TRINE', 'DIRECTIONAL', 'HALF_TRINE', 'COMBINATION_2', 'STEM_COMBINATION', 'GONG_HE'];
 
 function detect(branches: string[], stems?: string[]) {
   return detectAllInteractions({
@@ -122,6 +124,21 @@ describe('Interaction correspondence tables', () => {
     }
   });
 
+  it('reports GONG_HE for the 4 cardinal-less trine pairs only when their element is 透干', () => {
+    for (const [a, b, element, stem] of HALF_TRINES_WITHOUT_CARDINAL) {
+      // Absent the required stem: no interaction at all (not even as HALF_TRINE).
+      const noStem = detect([a, b, '', '']);
+      expect(findExact(noStem, 'GONG_HE', [a, b]), `${a}${b} without ${stem}`).toBeUndefined();
+      expect(findExact(noStem, 'HALF_TRINE', [a, b]), `${a}${b} without ${stem}`).toBeUndefined();
+
+      // With the required stem transparent: fires as GONG_HE with the correct element.
+      const withStem = detect([a, b, '', ''], [stem, '戊', '戊', '戊']);
+      const hit = findExact(withStem, 'GONG_HE', [a, b]);
+      expect(hit, `${a}${b} with ${stem}`).toBeDefined();
+      expect(hit!.potentialElement, `${a}${b} with ${stem}`).toBe(element);
+    }
+  });
+
   it('detects the two 三刑 triples and all 4 自刑', () => {
     for (const triple of [['寅', '巳', '申'], ['丑', '戌', '未']]) {
       expect(findExact(detect(triple), 'PUNISHMENT', triple), triple.join('')).toBeDefined();
@@ -151,7 +168,8 @@ describe('Interaction correspondence tables', () => {
       expected.get(key)!.add(type);
     };
     HALF_TRINES_WITH_CARDINAL.forEach(([a, b]) => note(a, b, 'HALF_TRINE'));
-    HALF_TRINES_WITHOUT_CARDINAL.forEach(([a, b]) => note(a, b, 'HALF_TRINE'));
+    // HALF_TRINES_WITHOUT_CARDINAL (拱合) deliberately excluded: with no stems supplied
+    // (as this sweep does) they produce no interaction at all - see GONG_HE test below.
     SIX_COMBINATIONS.forEach(([a, b]) => note(a, b, 'COMBINATION_2'));
     CLASHES.forEach(([a, b]) => note(a, b, 'CLASH'));
     HARMS.forEach(([a, b]) => note(a, b, 'HARM'));
@@ -192,6 +210,7 @@ describe('Interaction correspondence tables', () => {
       inspect(detect([a, b, c, '']));
     }
     for (const [a, b] of STEM_COMBINATIONS) inspect(detect(['子', '寅', '辰', '巳'], [a, b, '戊', '戊']));
+    for (const [a, b, , stem] of HALF_TRINES_WITHOUT_CARDINAL) inspect(detect([a, b, '', ''], [stem, '戊', '戊', '戊']));
     expect(checked.size).toBeGreaterThan(50);
   });
 });

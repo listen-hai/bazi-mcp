@@ -29,7 +29,7 @@ export function createBaziMcpServer(): Server {
     {
       name: 'calculate_bazi',
       description:
-        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York"). Pass exactly ONE of `solarDate`/`lunarDate` and ONE of `clockTime`/`shichen`/`timeUnknown` — conflicting combinations are rejected rather than silently resolved. Chinese mainland places default to Beijing civil time (UTC+8); for Xinjiang the geographic zone is reported separately and can be selected by passing `timezone` explicitly.',
+        'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York"). Pass exactly ONE of `solarDate`/`lunarDate` and ONE of `clockTime`/`shichen`/`timeUnknown` — conflicting combinations are rejected rather than silently resolved. Chinese mainland places default to Beijing civil time (UTC+8); for Xinjiang the geographic zone is reported separately and can be selected by passing `timezone` explicitly. `solarTime` selects the solar time correction mode: "true" (default, longitude correction + equation of time), "mean" (longitude correction only, 地方平太阳时), or "off" (neither); the older `trueSolar` boolean is a deprecated alias.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -109,9 +109,14 @@ export function createBaziMcpServer(): Server {
             default: 2,
             description: 'Early/late Zi hour convention: 2 (default, day rolls over at 23:00 / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or 1 (day rolls over at 00:00 / 子正换日)',
           },
+          solarTime: {
+            type: 'string',
+            enum: ['true', 'mean', 'off'],
+            description: 'Solar time correction mode (default: "true"). "true" = longitude correction + equation of time (full True Solar Time). "mean" = longitude correction only, no equation of time (地方平太阳时). "off" = neither; wall clock as given.',
+          },
           trueSolar: {
             type: 'boolean',
-            description: 'Whether to apply True Solar Time correction (default: true)',
+            description: 'Deprecated, use `solarTime` instead (true -> "true", false -> "off"). Whether to apply True Solar Time correction (default: true).',
           },
         },
         required: ['gender'],

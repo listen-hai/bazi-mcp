@@ -2,6 +2,8 @@ import { describe, it, expect } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
 import { detectAllInteractions } from '../src/core/interactions';
 import { BaziInputSchema } from '../src/schemas/input';
+import { SHICHEN_RANGES } from '../src/core/shichen';
+import { ShichenBranch } from '../src/types';
 
 /**
  * Authoritative & Verified Real-World Benchmark Cases
@@ -34,6 +36,13 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     // 比肩 (a peer stem), not a second 日主.
     expect(res.pillars.hour?.stemTenGod).toBe('比肩');
     expect(res.pillars.day.stemTenGod).toBe('日主');
+
+    // 未 hides 己/丁/乙 -> 比肩/偏印/七杀 against day master 己 (cross-checked
+    // independently via calculateTenGod('己', stem) for each hidden stem)
+    expect(res.pillars.day.hiddenStems.map(h => h.tenGod)).toEqual(['比肩', '偏印', '七杀']);
+    expect(res.pillars.year.naYin).toBe('屋上土');
+    expect(res.pillars.hour?.naYin).toBe('大林木');
+    expect(res.pillars.day.voidBranches).toEqual(['子', '丑']);
   });
 
   // 2. Barack Obama
@@ -62,6 +71,13 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     });
     expect(res.fourPillars).toBe('乙未 丙戌 壬戌 辛亥');
     expect(res.dayMaster.char).toBe('壬');
+
+    // 戌 hides 戊/辛/丁 -> 七杀/正印/正财 against day master 壬 (cross-checked
+    // independently via calculateTenGod('壬', stem) for each hidden stem)
+    expect(res.pillars.day.hiddenStems.map(h => h.tenGod)).toEqual(['七杀', '正印', '正财']);
+    expect(res.pillars.month.naYin).toBe('屋上土');
+    expect(res.pillars.hour?.naYin).toBe('钗钏金');
+    expect(res.pillars.day.voidBranches).toEqual(['子', '丑']);
   });
 
   // 4. Steve Jobs - rigorous True Solar Time calibration check
@@ -162,74 +178,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     expect(res.dayMaster.char).toBe('戊');
   });
 
-  // ── III. Cross-checked against an independent Bazi application ──
-
-  // These two charts were produced by a third-party Bazi app, which reports the
-  // birth's *true solar time* rather than the wall clock and birthplace. Feeding
-  // that true solar time back in with trueSolar disabled therefore checks the
-  // half of the pipeline the app's output can pin down: pillar derivation, Ten
-  // Gods against the day master, naYin and void branches. It does not exercise
-  // the true-solar-time calculation itself — that needs the original birthplace
-  // and clock time, which the source did not report.
-  //
-  // Every Ten God below is asserted because they are what the earlier reversed
-  // calculateTenGod argument order corrupted, and they were the last thing to be
-  // covered by any test.
-
-  // 11. Third-party app cross-check, male chart
-  // True solar time 1993-07-14 10:11 (巳 hour), born 6d23h after 小暑 (1993-07-07 10:32)
-  it('Cross-check: true solar time 1993-07-14 10:11 -> 癸酉 己未 丙申 癸巳', () => {
-    const res = calculateDualAxisBazi({
-      longitude: 120,
-      timezone: 'Asia/Shanghai',
-      trueSolar: false,
-      solarDate: { year: 1993, month: 7, day: 14 },
-      clockTime: { hour: 10, minute: 11 },
-      gender: 'male',
-    });
-    expect(res.fourPillars).toBe('癸酉 己未 丙申 癸巳');
-    expect(res.dayMaster.char).toBe('丙');
-
-    expect(res.pillars.year.stemTenGod).toBe('正官');
-    expect(res.pillars.month.stemTenGod).toBe('伤官');
-    expect(res.pillars.day.stemTenGod).toBe('日主');
-    expect(res.pillars.hour?.stemTenGod).toBe('正官');
-
-    // 申 hides 庚/壬/戊 -> 偏财/七杀/食神 against day master 丙
-    expect(res.pillars.day.hiddenStems?.map(h => h.tenGod)).toEqual(['偏财', '七杀', '食神']);
-
-    expect(res.pillars.year.naYin).toBe('剑锋金');
-    expect(res.pillars.hour?.naYin).toBe('长流水');
-    expect(res.pillars.day.voidBranches).toEqual(['辰', '巳']);
-  });
-
-  // 12. Third-party app cross-check, female chart
-  // True solar time 1993-05-20 09:32 (巳 hour), born 14d13h after 立夏 (1993-05-05 20:01)
-  it('Cross-check: true solar time 1993-05-20 09:32 -> 癸酉 丁巳 辛丑 癸巳', () => {
-    const res = calculateDualAxisBazi({
-      longitude: 120,
-      timezone: 'Asia/Shanghai',
-      trueSolar: false,
-      solarDate: { year: 1993, month: 5, day: 20 },
-      clockTime: { hour: 9, minute: 32 },
-      gender: 'female',
-    });
-    expect(res.fourPillars).toBe('癸酉 丁巳 辛丑 癸巳');
-    expect(res.dayMaster.char).toBe('辛');
-
-    expect(res.pillars.year.stemTenGod).toBe('食神');
-    expect(res.pillars.month.stemTenGod).toBe('七杀');
-    expect(res.pillars.day.stemTenGod).toBe('日主');
-    expect(res.pillars.hour?.stemTenGod).toBe('食神');
-
-    // 丑 hides 己/癸/辛 -> 偏印/食神/比肩 against day master 辛
-    expect(res.pillars.day.hiddenStems?.map(h => h.tenGod)).toEqual(['偏印', '食神', '比肩']);
-
-    expect(res.pillars.month.naYin).toBe('沙中土');
-    expect(res.pillars.day.naYin).toBe('壁上土');
-  });
-
-  // ── IV. Independently-verified spot cases (day pillar via (JDN+49) mod 60,
+  // ── III. Independently-verified spot cases (day pillar via (JDN+49) mod 60,
   // hour stem via the Five Rats rule, cross-checked against the implementation) ──
 
   it('China DST +9: 1989-09-16 23:30 Asia/Shanghai stays in 亥 (true solar 22:20, no day roll)', () => {
@@ -404,7 +353,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       gender: 'male',
     });
     expect(res.fourPillars).toBe('壬戌 辛亥 壬午 庚子');
-    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('23:46:37');
+    expect(res.diagnostics.axisB_localSolarTime_dayHourPillars).toContain('23:46:37');
   });
 
   it('N1: US War Time boundary (America/Phoenix 1944-02-04 04:09)', () => {
@@ -417,7 +366,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       gender: 'male',
     });
     expect(res.fourPillars).toBe('癸未 乙丑 戊戌 甲寅');
-    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('03:26:43');
+    expect(res.diagnostics.axisB_localSolarTime_dayHourPillars).toContain('03:26:43');
   });
 
   it('FIX1: Moscow 2014-08-01 (before the 2014-10-26 permanent reversion to +3) reports +04:00 with no DST tag', () => {
@@ -443,7 +392,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       clockTime: { hour: 12, minute: 0 },
       gender: 'male',
     });
-    expect(res.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('06:24');
+    expect(res.diagnostics.axisB_localSolarTime_dayHourPillars).toContain('06:24');
   });
 
   it('FIX6: Kashgar trueSolar:false warns that a large longitude correction was discarded', () => {
@@ -455,6 +404,132 @@ describe('Authoritative Real-World Benchmark Suite', () => {
       gender: 'male',
     });
     expect(res.diagnostics.warnings.some(w => w.includes('trueSolar') && /-?176/.test(w))).toBe(true);
+  });
+
+  // ── solarTime: three-way mode replacing the trueSolar boolean ──
+
+  it('solarTime: "true" is byte-identical to the default (no solarTime/trueSolar passed)', () => {
+    const payload = {
+      place: 'New York, NY',
+      solarDate: { year: 1946, month: 6, day: 14 } as const,
+      clockTime: { hour: 10, minute: 54 } as const,
+      gender: 'male' as const,
+    };
+    const byDefault = calculateDualAxisBazi(payload);
+    const explicit = calculateDualAxisBazi({ ...payload, solarTime: 'true' as const });
+    expect(explicit).toEqual(byDefault);
+    expect(byDefault.diagnostics.convention.solarTime).toBe('true');
+  });
+
+  it('solarTime: "mean" differs from "true" when the equation of time alone crosses a shichen boundary (Beijing 2000-01-01 09:15)', () => {
+    const payload = {
+      timezone: 'Asia/Shanghai' as const,
+      longitude: 116.4074,
+      solarDate: { year: 2000, month: 1, day: 1 } as const,
+      clockTime: { hour: 9, minute: 15 } as const,
+      gender: 'male' as const,
+    };
+    // Longitude correction alone (-14.37 min) leaves 09:15 just after the
+    // 09:00 辰/巳 boundary -> 巳 hour. The equation of time (-3.09 min at this
+    // date) pushes it back before the boundary -> 辰 hour.
+    const mean = calculateDualAxisBazi({ ...payload, solarTime: 'mean' });
+    const trueMode = calculateDualAxisBazi({ ...payload, solarTime: 'true' });
+    expect(mean.fourPillars).toBe('己卯 丙子 戊午 丁巳');
+    expect(trueMode.fourPillars).toBe('己卯 丙子 戊午 丙辰');
+    expect(mean.pillars.hour?.ganZhi).not.toBe(trueMode.pillars.hour?.ganZhi);
+  });
+
+  it('solarTime: "off" still triggers the discarded-longitude-correction warning (Kashgar)', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Kashgar',
+      solarDate: { year: 1995, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      solarTime: 'off',
+      gender: 'male',
+    });
+    expect(res.diagnostics.convention.solarTime).toBe('off');
+    expect(res.diagnostics.warnings.some(w => w.includes('trueSolar') && /-?176/.test(w))).toBe(true);
+  });
+
+  it('solarTime: "mean" does NOT warn about the omitted equation of time', () => {
+    const res = calculateDualAxisBazi({
+      place: 'Kashgar',
+      solarDate: { year: 1995, month: 6, day: 15 },
+      clockTime: { hour: 8, minute: 0 },
+      solarTime: 'mean',
+      gender: 'male',
+    });
+    expect(res.diagnostics.warnings.some(w => w.includes('trueSolar'))).toBe(false);
+  });
+
+  it('axisB_localSolarTime_dayHourPillars is self-consistent with the hour pillar in all three solarTime modes (Beijing 2000-01-01 09:15)', () => {
+    const payload = {
+      timezone: 'Asia/Shanghai' as const,
+      longitude: 116.4074,
+      solarDate: { year: 2000, month: 1, day: 1 } as const,
+      clockTime: { hour: 9, minute: 15 } as const,
+      gender: 'male' as const,
+    };
+
+    // Concrete expected strings (arithmetic: clock 09:15, longitude correction
+    // -14.37 min, equation of time -3.09 min):
+    // 'true' -> full true solar time (both corrections): 08:57:32 (辰)
+    // 'mean' -> local mean solar time (longitude only, no EoT): 09:00:37 (巳)
+    // 'off'  -> the wall clock itself, uncorrected: 09:15:00 (巳)
+    const expected: Record<'true' | 'mean' | 'off', { time: string; hourGanZhi: string }> = {
+      true: { time: '2000-01-01 08:57:32', hourGanZhi: '丙辰' },
+      mean: { time: '2000-01-01 09:00:37', hourGanZhi: '丁巳' },
+      off: { time: '2000-01-01 09:15:00', hourGanZhi: '丁巳' },
+    };
+
+    for (const mode of ['true', 'mean', 'off'] as const) {
+      const res = calculateDualAxisBazi({ ...payload, solarTime: mode });
+      expect(res.diagnostics.axisB_localSolarTime_dayHourPillars).toBe(expected[mode].time);
+      expect(res.pillars.hour?.ganZhi).toBe(expected[mode].hourGanZhi);
+
+      // Generic self-consistency check: the reported solar time must fall
+      // inside the 時辰 range implied by the returned hour pillar's branch,
+      // whatever that branch happens to be. This is what actually guards
+      // against the diagnostic and the pillar disagreeing.
+      const branch = res.pillars.hour!.branch as ShichenBranch;
+      const range = SHICHEN_RANGES[branch];
+      const [, timePart] = res.diagnostics.axisB_localSolarTime_dayHourPillars.split(' ');
+      const [h, m] = timePart.split(':').map(Number);
+      const minutesOfDay = h * 60 + m;
+      const startMinutes = range.startHour * 60 + range.startMinute;
+      // 子 wraps midnight (23:00-00:59); every other branch is a same-day range.
+      const inRange = branch === '子'
+        ? minutesOfDay >= startMinutes || h < 1
+        : minutesOfDay >= startMinutes && h <= range.endHour;
+      expect(inRange).toBe(true);
+    }
+  });
+
+  it('trueSolar: false (deprecated alias) still behaves exactly as solarTime: "off"', () => {
+    const payload = {
+      place: 'Kashgar',
+      solarDate: { year: 1995, month: 6, day: 15 } as const,
+      clockTime: { hour: 8, minute: 0 } as const,
+      gender: 'male' as const,
+    };
+    const viaOldBoolean = calculateDualAxisBazi({ ...payload, trueSolar: false });
+    const viaNewMode = calculateDualAxisBazi({ ...payload, solarTime: 'off' as const });
+    expect(viaOldBoolean).toEqual(viaNewMode);
+  });
+
+  it('solarTime and trueSolar: conflicting values are rejected', () => {
+    const base = {
+      place: 'Beijing',
+      solarDate: { year: 2000, month: 1, day: 1 },
+      clockTime: { hour: 12, minute: 0 },
+      gender: 'male' as const,
+    };
+    expect(BaziInputSchema.safeParse({ ...base, trueSolar: false, solarTime: 'true' }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...base, trueSolar: true, solarTime: 'off' }).success).toBe(false);
+    expect(BaziInputSchema.safeParse({ ...base, trueSolar: true, solarTime: 'mean' }).success).toBe(false);
+    // Agreeing values are fine
+    expect(BaziInputSchema.safeParse({ ...base, trueSolar: false, solarTime: 'off' }).success).toBe(true);
+    expect(BaziInputSchema.safeParse({ ...base, trueSolar: true, solarTime: 'true' }).success).toBe(true);
   });
 
   it('N4 & N6: Sub-minute LMT offset and locationSource reporting', () => {
@@ -475,7 +550,7 @@ describe('Authoritative Real-World Benchmark Suite', () => {
     });
     expect(resSupplied.diagnostics.locationSource).toBe('caller_supplied');
     expect(resSupplied.diagnostics.utcOffset).toBe('+08:05:43');
-    expect(resSupplied.diagnostics.axisB_localTrueSolarTime_dayHourPillars).toContain('11:27:57');
+    expect(resSupplied.diagnostics.axisB_localSolarTime_dayHourPillars).toContain('11:27:57');
   });
 
   it('N5: No Xinjiang warning false positives for Tibet or Gansu', () => {

@@ -81,7 +81,7 @@ export interface DiagnosticsOutput {
   utcOffset: string;
   utcInstant: string;
   axisA_beijingWallClock_yearMonthPillars: string;
-  axisB_localTrueSolarTime_dayHourPillars: string;
+  axisB_localSolarTime_dayHourPillars: string;
   longitudeCorrectionMinutes: number;
   equationOfTimeMinutes: number;
   lunar?: {
@@ -92,7 +92,13 @@ export interface DiagnosticsOutput {
   };
   convention: {
     sect: 1 | 2;
-    trueSolar: boolean;
+    /**
+     * Resolved solar time correction mode: 'true' (longitude + equation of
+     * time, the default), 'mean' (longitude only, 地方平太阳时), or 'off'
+     * (neither). Supersedes the old `trueSolar` boolean, which could not
+     * express the 'mean' case; see `BaziInput.solarTime`.
+     */
+    solarTime: 'true' | 'mean' | 'off';
     childLimitProvider: string;
     ageBasis: string;
   };

@@ -46,8 +46,16 @@ export const BaziInputSchema = z.object({
   // Gender and charting convention
   gender: z.enum(['male', 'female']).describe('Gender: male or female'),
   sect: z.union([z.literal(1), z.literal(2)]).optional().default(2).describe('Early/late Zi-hour convention: 2 (default, day rolls over at 23:00 / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or 1 (day rolls over at 00:00 / 子正换日)'),
-  trueSolar: z.boolean().optional().default(true).describe('Whether to apply True Solar Time correction (default true)'),
+  solarTime: z.enum(['true', 'mean', 'off']).optional().describe(
+    'Solar time correction mode (default "true"): "true" applies both the longitude correction and the equation of time (full True Solar Time); "mean" applies only the longitude correction, no equation of time (地方平太阳时); "off" applies neither, using the wall clock as given.'
+  ),
+  /** @deprecated Use `solarTime` instead (true -> "true", false -> "off"). */
+  trueSolar: z.boolean().optional().describe('Deprecated: use `solarTime` instead. Whether to apply True Solar Time correction (default true).'),
 }).strict().refine(
+  data => data.solarTime === undefined || data.trueSolar === undefined ||
+    data.solarTime === (data.trueSolar ? 'true' : 'off'),
+  { message: 'trueSolar and solarTime disagree; please provide only one (trueSolar is deprecated in favor of solarTime: "true" | "mean" | "off").' }
+).refine(
   data => data.solarDate || data.lunarDate,
   { message: 'Must provide either solarDate or lunarDate.' }
 ).refine(

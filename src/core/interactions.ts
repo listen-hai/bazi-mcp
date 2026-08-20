@@ -52,11 +52,16 @@ const HALF_TRINES: Array<{ branches: [string, string]; element: string; name: st
   { branches: ['午', '戌'], element: 'fire', name: '午戌半合火' },
   { branches: ['酉', '丑'], element: 'metal', name: '酉丑半合金' },
   { branches: ['卯', '未'], element: 'wood', name: '卯未半合木' },
-  // 拱合
-  { branches: ['申', '辰'], element: 'water', name: '申辰拱合水' },
-  { branches: ['寅', '戌'], element: 'fire', name: '寅戌拱合火' },
-  { branches: ['巳', '丑'], element: 'metal', name: '巳丑拱合金' },
-  { branches: ['亥', '未'], element: 'wood', name: '亥未拱合木' },
+];
+
+// 拱合: pairs that lack the cardinal branch (子午卯酉) of their trine. Mainstream doctrine
+// holds these lack the 中神 needed to combine on their own, and only form when the element
+// is transparent among the stems (透干) - weaker than a proper 半合.
+const GONG_HE: Array<{ branches: [string, string]; element: string; stems: [string, string]; name: string }> = [
+  { branches: ['申', '辰'], element: 'water', stems: ['壬', '癸'], name: '申辰拱合水' },
+  { branches: ['寅', '戌'], element: 'fire', stems: ['丙', '丁'], name: '寅戌拱合火' },
+  { branches: ['巳', '丑'], element: 'metal', stems: ['庚', '辛'], name: '巳丑拱合金' },
+  { branches: ['亥', '未'], element: 'wood', stems: ['甲', '乙'], name: '亥未拱合木' },
 ];
 
 const SIX_COMBINATIONS: Array<{ branches: [string, string]; element: string; name: string }> = [
@@ -118,7 +123,7 @@ const PUNISHMENTS: Array<{ branches: string[]; name: string; isSelf?: boolean }>
  * Detects all branch interactions across the 4 pillars with full support for:
  * - 三会 (DIRECTIONAL)
  * - 三合 (TRINE)
- * - 半合 / 拱合 (HALF_TRINE)
+ * - 半合 (HALF_TRINE) / 拱合 (GONG_HE)
  * - 六合 (COMBINATION_2)
  * - 六冲 (CLASH)
  * - 六害 (HARM)
@@ -178,6 +183,12 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
     if (!branchMap.has(p.branch)) branchMap.set(p.branch, []);
     branchMap.get(p.branch)!.push(p.name);
   }
+
+  const presentStems = new Set(
+    [pillars.yearStem, pillars.monthStem, pillars.dayStem, pillars.hourStem].filter(
+      (s): s is string => !!s
+    )
+  );
 
   // 0. 天干五合 (Heavenly Stem Combinations)
   if (pillars.yearStem && pillars.monthStem && pillars.dayStem) {
@@ -249,7 +260,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
     }
   }
 
-  // 3. 半合 / 拱合 (Half Trines - only report if full trine is not already present)
+  // 3. 半合 (Half Trines with cardinal - only report if full trine is not already present)
   for (const ht of HALF_TRINES) {
     if (!fullTrineElements.has(ht.element) && ht.branches.every(b => branchMap.has(b))) {
       const pNames = ht.branches.flatMap(b => branchMap.get(b)!);
@@ -259,9 +270,25 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
         pNames,
         ht.element,
         `Half-Trine (${ht.name})`,
-        '半合/拱合之化气需视月令与透干引化情况'
+        '半合之化气需视月令与透干引化情况'
       );
     }
+  }
+
+  // 3b. 拱合 (pairs lacking the cardinal branch - only form when their element is 透干)
+  for (const gh of GONG_HE) {
+    if (fullTrineElements.has(gh.element) || !gh.branches.every(b => branchMap.has(b))) continue;
+    const transparentStem = gh.stems.find(s => presentStems.has(s));
+    if (!transparentStem) continue;
+    const pNames = gh.branches.flatMap(b => branchMap.get(b)!);
+    addResult(
+      'GONG_HE',
+      gh.branches,
+      pNames,
+      gh.element,
+      `Gong-He (${gh.name})`,
+      `因${transparentStem}透干而成拱合，力量较真半合为弱`
+    );
   }
 
   // 4. 六合 (Six Combinations)

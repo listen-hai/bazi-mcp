@@ -115,8 +115,8 @@ bazi-mcp
 | `place` | string | 可选 | 城市英文名称（如 `"Beijing"`、`"New York"`、`"Tacoma, WA"`、`"London, United Kingdom"`）。AI Agent 会自动翻译用户的任意语言输入。 |
 | `longitude` | number | 可选 | 出生地经度（东经为正，如 `102.8329`，西经为负，如 `-122.4443`。*跨日界线地点如 Chatham 群岛请在 [-180, 180] 范围内传值如 `-176.55`*）。 |
 | `timezone` | string | 可选 | 官方 IANA 时区名称（如 `"Asia/Shanghai"`、`"America/Los_Angeles"`） |
-| `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1993, "month": 7, "day": 14 }`（支持范围：1800–2100） |
-| `lunarDate` | object | 二选一* | 农历出生日期 `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }`（支持范围：1800–2100） |
+| `solarDate` | object | 二选一* | 公历出生日期 `{ "year": 1990, "month": 1, "day": 1 }`（支持范围：1800–2100） |
+| `lunarDate` | object | 二选一* | 农历出生日期 `{ "year": 1989, "month": 12, "day": 5, "isLeapMonth": false }`（支持范围：1800–2100） |
 | `lunarDateFrame` | string | 可选 | 农历时区基准：`"local"`（默认，按当地公历日对应农历）或 `"beijing"` |
 | `clockTime` | object | 三选一** | 钟表出生时刻 `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | 三选一** | 传统十二时辰分支（`'子'` 至 `'亥'`） |
@@ -124,7 +124,8 @@ bazi-mcp
 | `dstFold` | number | 可选 | 秋季夏令时折返重叠消歧：`0`（夏令时）或 `1`（标准时） |
 | `gender` | string | **必填** | `"male"`（乾造/男）或 `"female"`（坤造/女） |
 | `sect` | number | 可选 | 早晚子时口径：`2`（默认，23:00 子初换日，五鼠遁自洽）或 `1`（00:00 子正换日） |
-| `trueSolar` | boolean | 可选 | 是否启用真太阳时修正（默认 `true`） |
+| `solarTime` | string | 可选 | 真太阳时修正模式：`"true"`（默认，经度修正 + 时差修正）、`"mean"`（仅经度修正，地方平太阳时）或 `"off"`（均不修正，直接使用钟表时刻） |
+| `trueSolar` | boolean | 可选，已弃用 | 请改用 `solarTime`（`true` → `"true"`，`false` → `"off"`）。若与 `solarTime` 同时传入且取值冲突将被拒绝。 |
 
 *\* `solarDate` 与 `lunarDate` 必须提供其一。*  
 *\*\* `clockTime`、`shichen`、`timeUnknown: true` 必须提供其一。*

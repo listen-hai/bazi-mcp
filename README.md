@@ -106,8 +106,8 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | `place` | string | Optional | City name in English (e.g. `"Beijing"`, `"New York"`, `"Tacoma, WA"`, `"Lagos"`, `"London, United Kingdom"`). AI agents automatically translate any user language. |
 | `longitude` | number | Optional | Birth longitude in degrees (East positive, e.g. `102.8329` or `-122.4443`). *Note for Date Line locations (e.g. Chatham Islands): express longitude in [-180, 180] (e.g. `-176.55` in `UTC+12:45`), normalized against the standard time meridian.* |
 | `timezone` | string | Optional | IANA timezone identifier (e.g. `"Asia/Shanghai"`, `"America/Los_Angeles"`) |
-| `solarDate` | object | Optional* | Solar birth date `{ "year": 1993, "month": 7, "day": 14 }` (supported: 1800–2100) |
-| `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1993, "month": 5, "day": 25, "isLeapMonth": false }` (supported: 1800–2100) |
+| `solarDate` | object | Optional* | Solar birth date `{ "year": 1990, "month": 1, "day": 1 }` (supported: 1800–2100) |
+| `lunarDate` | object | Optional* | Lunar birth date `{ "year": 1989, "month": 12, "day": 5, "isLeapMonth": false }` (supported: 1800–2100) |
 | `lunarDateFrame` | string | Optional | `"local"` (default) or `"beijing"` |
 | `clockTime` | object | Optional** | Local wall clock time `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | Optional** | Traditional Chinese two-hour branch (`'子'` to `'亥'`) |
@@ -115,7 +115,8 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | `dstFold` | number | Optional | `0` (DST) or `1` (Standard) for ambiguous fall-back overlap hours |
 | `gender` | string | **Required** | `"male"` (乾造) or `"female"` (坤造) |
 | `sect` | number | Optional | `2` (default, 23:00 Zi-hour rollover / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or `1` (00:00 midnight day rollover / 子正换日) |
-| `trueSolar` | boolean | Optional | `true` (default) for astronomical True Solar Time correction |
+| `solarTime` | string | Optional | Solar time correction mode: `"true"` (default, longitude correction + equation of time), `"mean"` (longitude correction only, 地方平太阳时), or `"off"` (neither, wall clock as given) |
+| `trueSolar` | boolean | Optional, deprecated | Use `solarTime` instead (`true` → `"true"`, `false` → `"off"`). Supplying both is rejected if they disagree. |
 
 *\* Provide either `solarDate` or `lunarDate`.*  
 *\*\* Provide either `clockTime`, `shichen`, or `timeUnknown: true`.*

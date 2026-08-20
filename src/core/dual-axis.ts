@@ -338,7 +338,14 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
   // 6. Calculate Axis B (Local Wall Clock + IANA Timezone + Birth Longitude)
   // Calculates True Solar Time; determines Day Pillar and Hour Pillar
-  const enableTrueSolar = input.trueSolar !== false;
+  //
+  // solarTime is the three-way successor to the old trueSolar boolean, which
+  // conflated two independent corrections. `trueSolar` is kept as a deprecated
+  // alias (true -> 'true', false -> 'off'); the zod schema rejects the two
+  // disagreeing. 'true' (both corrections) reproduces the exact old default
+  // behavior; 'off' reproduces the exact old trueSolar:false behavior.
+  const solarTimeMode: 'true' | 'mean' | 'off' =
+    input.solarTime ?? (input.trueSolar === false ? 'off' : 'true');
 
   // Resolve standard (non-DST) offset for the birth instant by 13-point sampling.
   // This avoids upstream base meridian misattribution during historical base offset shifts (e.g. Moscow 1922, US War Time 1944).
@@ -351,7 +358,8 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
   const axisBChart = (
     w: { year: number; month: number; day: number; hour: number; minute: number; second?: number },
-    tzOffsetHours: number
+    tzOffsetHours: number,
+    enableTST: boolean
   ) =>
     calculateBaziChart({
       year: w.year,
@@ -362,11 +370,48 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
       gender: input.gender,
       longitude: loc.longitude,
       timezone: tzOffsetHours,
-      enableTrueSolarTime: enableTrueSolar,
+      enableTrueSolarTime: enableTST,
       dayBoundaryMode,
     });
 
-  const B = axisBChart(standardWall, standardOffsetHours);
+  // Resolves the wall clock (and whether the engine's own True Solar Time should
+  // run) for a given solarTimeMode. 'true'/'off' pass the wall through unchanged
+  // and let the engine apply both corrections or neither, exactly as the old
+  // boolean did. 'mean' has no engine-level equivalent (it's all-or-nothing
+  // there), so the longitude correction is applied here by hand -- reusing the
+  // @openfate/true-solar-time package's own decomposed longitudeCorrectionMinutes
+  // (a purely geometric function of longitude and the standard meridian, so it's
+  // safe to compute at dstOffset=0 regardless of the actual DST state) -- and the
+  // engine's True Solar Time is then disabled so it isn't corrected a second time.
+  const resolveAxisBWall = (
+    w: { year: number; month: number; day: number; hour: number; minute: number; second?: number },
+    tzOffsetHours: number
+  ): { wall: typeof w; enableTST: boolean } => {
+    if (solarTimeMode !== 'mean') {
+      return { wall: w, enableTST: solarTimeMode === 'true' };
+    }
+    const meanDetail = calculateTrueSolarTime(
+      {
+        year: w.year,
+        month: w.month,
+        day: w.day,
+        hour: w.hour,
+        minute: w.minute,
+        second: w.second ?? 0,
+        timeZoneOffset: tzOffsetHours,
+        dstOffset: 0,
+      },
+      { longitude: loc.longitude }
+    );
+    const shifted = toUTCWall(
+      Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second ?? 0) +
+        meanDetail.longitudeCorrectionMinutes * 60000
+    );
+    return { wall: shifted, enableTST: false };
+  };
+
+  const { wall: axisBWall, enableTST: axisBEnableTST } = resolveAxisBWall(standardWall, standardOffsetHours);
+  const B = axisBChart(axisBWall, standardOffsetHours, axisBEnableTST);
 
   // Extract Solar Time details via @openfate/true-solar-time using standard offset + DST offset
   const solarTimeDetail = calculateTrueSolarTime(
@@ -389,9 +434,9 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     );
   }
 
-  if (!enableTrueSolar && Math.abs(solarTimeDetail.longitudeCorrectionMinutes) > 30) {
+  if (solarTimeMode === 'off' && Math.abs(solarTimeDetail.longitudeCorrectionMinutes) > 30) {
     warnings.push(
-      `trueSolar is set to false: a longitude correction of ${solarTimeDetail.longitudeCorrectionMinutes.toFixed(1)} minutes was NOT applied; the hour pillar (and possibly the day pillar) may differ from a true-solar-time chart.`
+      `solarTime is "off" (trueSolar: false): a longitude correction of ${solarTimeDetail.longitudeCorrectionMinutes.toFixed(1)} minutes was NOT applied; the hour pillar (and possibly the day pillar) may differ from a true-solar-time chart.`
     );
   }
 
@@ -419,7 +464,8 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
 
         const sampleStdOffsetMinutes = getStandardOffsetMinutes(sampleWRes.instant, loc.timezone);
         const sampleStdWall = toUTCWall(sampleWRes.instant + sampleStdOffsetMinutes * 60000);
-        const sampleB = axisBChart(sampleStdWall, sampleStdOffsetMinutes / 60);
+        const sampleResolved = resolveAxisBWall(sampleStdWall, sampleStdOffsetMinutes / 60);
+        const sampleB = axisBChart(sampleResolved.wall, sampleStdOffsetMinutes / 60, sampleResolved.enableTST);
 
         if (sampleB.pillars.hour) {
           candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
@@ -506,20 +552,29 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   const offsetStr = formatOffsetString(offsetMinutes, isDst);
   const utcInstantStr = new Date(instant).toISOString();
   const axisAStr = `${beijingWallForA.year}-${String(beijingWallForA.month).padStart(2, '0')}-${String(beijingWallForA.day).padStart(2, '0')} ${String(beijingWallForA.hour).padStart(2, '0')}:${String(beijingWallForA.minute).padStart(2, '0')}`;
-  const axisBStr = solarTimeDetail.trueSolarDateTime;
+  // The diagnostic must report the local solar time actually fed to Axis B's
+  // day/hour pillar calculation, not always the full true-solar-time value:
+  // - 'true': the engine applies longitude + equation of time internally, so
+  //   solarTimeDetail.trueSolarDateTime (computed the same way) is correct.
+  // - 'mean'/'off': `axisBWall` (longitude-only shift, or the raw standard
+  //   wall clock, respectively) is passed straight through with the engine's
+  //   own True Solar Time disabled, so `axisBWall` IS the value used.
+  const axisBStr = solarTimeMode === 'true'
+    ? solarTimeDetail.trueSolarDateTime
+    : `${axisBWall.year}-${String(axisBWall.month).padStart(2, '0')}-${String(axisBWall.day).padStart(2, '0')} ${String(axisBWall.hour).padStart(2, '0')}:${String(axisBWall.minute).padStart(2, '0')}:${String(axisBWall.second ?? 0).padStart(2, '0')}`;
 
   const diagnostics: DiagnosticsOutput = {
     wallClock: wallStr,
     utcOffset: offsetStr,
     utcInstant: utcInstantStr,
     axisA_beijingWallClock_yearMonthPillars: axisAStr,
-    axisB_localTrueSolarTime_dayHourPillars: axisBStr,
+    axisB_localSolarTime_dayHourPillars: axisBStr,
     longitudeCorrectionMinutes: Number(solarTimeDetail.longitudeCorrectionMinutes.toFixed(2)),
     equationOfTimeMinutes: Number(solarTimeDetail.equationOfTimeMinutes.toFixed(2)),
     lunar: lunarDiag,
     convention: {
       sect,
-      trueSolar: enableTrueSolar,
+      solarTime: solarTimeMode,
       childLimitProvider: 'three_days_one_year_shichen_quantized',
       ageBasis: 'nominal',
     },
