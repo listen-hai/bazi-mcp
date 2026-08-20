@@ -39,6 +39,8 @@ export function createBaziMcpServer(): Server {
           },
           longitude: {
             type: 'number',
+            minimum: -180,
+            maximum: 180,
             description: 'Birth location longitude (positive = East, negative = West, e.g. 116.4074 or -122.4443)',
           },
           timezone: {
@@ -50,9 +52,9 @@ export function createBaziMcpServer(): Server {
             description: 'Solar (Gregorian) birth date (mutually exclusive with lunarDate)',
             additionalProperties: false,
             properties: {
-              year: { type: 'integer', description: 'Solar year (1800-2100, e.g. 1990)' },
-              month: { type: 'integer', description: 'Month (1-12)' },
-              day: { type: 'integer', description: 'Day (1-31)' },
+              year: { type: 'integer', minimum: 1800, maximum: 2100, description: 'Solar year (1800-2100, e.g. 1990)' },
+              month: { type: 'integer', minimum: 1, maximum: 12, description: 'Month (1-12)' },
+              day: { type: 'integer', minimum: 1, maximum: 31, description: 'Day (1-31)' },
             },
             required: ['year', 'month', 'day'],
           },
@@ -61,9 +63,9 @@ export function createBaziMcpServer(): Server {
             description: 'Lunar (Chinese calendar) birth date (mutually exclusive with solarDate)',
             additionalProperties: false,
             properties: {
-              year: { type: 'integer', description: 'Lunar year (1800-2100, e.g. 1990)' },
-              month: { type: 'integer', description: 'Lunar month (1-12)' },
-              day: { type: 'integer', description: 'Lunar day (1-30)' },
+              year: { type: 'integer', minimum: 1800, maximum: 2100, description: 'Lunar year (1800-2100, e.g. 1990)' },
+              month: { type: 'integer', minimum: 1, maximum: 12, description: 'Lunar month (1-12)' },
+              day: { type: 'integer', minimum: 1, maximum: 30, description: 'Lunar day (1-30)' },
               isLeapMonth: { type: 'boolean', description: 'Whether this is a leap month' },
             },
             required: ['year', 'month', 'day'],
@@ -78,9 +80,9 @@ export function createBaziMcpServer(): Server {
             description: 'Clock time of birth (mutually exclusive with shichen and timeUnknown)',
             additionalProperties: false,
             properties: {
-              hour: { type: 'integer', description: 'Hour (0-23)' },
-              minute: { type: 'integer', description: 'Minute (0-59)' },
-              second: { type: 'integer', description: 'Second (0-59)' },
+              hour: { type: 'integer', minimum: 0, maximum: 23, description: 'Hour (0-23)' },
+              minute: { type: 'integer', minimum: 0, maximum: 59, description: 'Minute (0-59)' },
+              second: { type: 'integer', minimum: 0, maximum: 59, description: 'Second (0-59)' },
             },
             required: ['hour', 'minute'],
           },
