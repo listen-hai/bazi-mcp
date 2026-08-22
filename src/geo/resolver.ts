@@ -239,24 +239,28 @@ export function resolveLocation(input: {
       // Timezones disagree -> always refuse and list candidates.
       // Getting the wrong timezone silently is catastrophic for a bazi chart.
       // The calling AI agent can easily clarify with the user and retry.
-      // Refuse rather than pick. A same-name city in another timezone yields a
-      // chart for the wrong person, and no amount of population skew makes a
-      // guess honest -- the caller is an AI agent that can simply ask which
-      // one was meant. So the list has to be good enough to ASK from: the
-      // population lets the agent lead with the likely candidate, and the
-      // coordinates let it confirm without a second lookup.
+      // Refuse rather than pick, and give the agent what it needs to ASK --
+      // but nothing that nudges it toward an answer. Province and country are
+      // how a person recognises their own birthplace; the coordinates and
+      // timezone let the agent retry without a second lookup.
+      //
+      // Population is deliberately NOT listed. It is not identifying
+      // information -- nobody knows their birthplace by its population -- it
+      // is a likelihood prior, and it is the exact signal behind the
+      // auto-pick this code used to do. Publishing it here would just move
+      // the guess up one level, from our code into the agent's prompt.
       const listStr = candidates
         .slice(0, 5)
         .map(
           c =>
             `• ${c.name} (${c.province || ''}, ${c.country})` +
-            `${c.population ? ` — population ${Math.round(c.population).toLocaleString('en-US')}` : ''}` +
             ` -> latitude: ${c.latitude}°, longitude: ${c.longitude}°, timezone: "${c.timezone}"`
         )
         .join('\n');
       throw new Error(
-        `Place name "${input.place}" matched multiple candidate cities in different timezones. ` +
-        `Ask which one was meant, then retry with a more specific \`place\` (e.g. "${candidates[0].name}, ${candidates[0].country}") ` +
+        `Place name "${input.place}" matched multiple candidate cities -- different places, ` +
+        `not necessarily different timezones, but far enough apart to change the chart. ` +
+        `Ask which one was meant, then retry as \`"${input.place}, <province or country>"\` ` +
         `or with explicit \`longitude\` and \`timezone\`:\n${listStr}`
       );
     }
