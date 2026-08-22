@@ -51,7 +51,6 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
     province: ct.province,
     longitude: ct.lng,
     latitude: ct.lat,
-    population: ct.pop,
     timezone,
     alternateTimezones: alternateTimezones.length > 0 ? alternateTimezones : undefined,
   };
@@ -62,7 +61,14 @@ function toCityEntry(ct: CityTimezoneEntry): CityEntry {
  * Supports English city names, with fuzzy matching on city and city_ascii fields,
  * prioritized by city population descending.
  */
+/** Cap on returned candidates. Disclosed by `lookupCityWithCount`. */
+const MAX_RESULTS = 10;
+
 export function lookupCity(query: string): CityEntry[] {
+  return searchCities(query).slice(0, MAX_RESULTS);
+}
+
+function searchCities(query: string): CityEntry[] {
   if (!query || !query.trim()) return [];
 
   const norm = normalizeQuery(query);
@@ -125,7 +131,18 @@ export function lookupCity(query: string): CityEntry[] {
     }
   }
 
-  return results.slice(0, 10);
+  return results;
+}
+
+/**
+ * Same search as `lookupCity`, but also reports how many cities actually
+ * matched before the cap. A truncated list that does not say it is truncated
+ * misrepresents how complete the answer is: "Santa" partial-matches 37
+ * cities, and the caller's real birthplace can be among the ones dropped.
+ */
+export function lookupCityWithCount(query: string): { matched: number; results: CityEntry[] } {
+  const all = searchCities(query);
+  return { matched: all.length, results: all.slice(0, MAX_RESULTS) };
 }
 
 export interface ResolvedLocation {
@@ -183,7 +200,7 @@ export function resolveLocation(input: {
 
   // 3. Place provided (with optional timezone override)
   if (hasPlace) {
-    const candidates = lookupCity(input.place!);
+    const { matched, results: candidates } = lookupCityWithCount(input.place!);
 
     if (candidates.length === 0) {
       throw new Error(
@@ -249,8 +266,16 @@ export function resolveLocation(input: {
       // is a likelihood prior, and it is the exact signal behind the
       // auto-pick this code used to do. Publishing it here would just move
       // the guess up one level, from our code into the agent's prompt.
+      // Cutting a long list for size is fine; not saying you cut it is not.
+      // "Santa" partial-matches 37 cities, of which 10 survive the lookup cap
+      // and 5 used to be printed -- the caller's real birthplace could be
+      // among the ones that vanished, dropped by population rank, silently.
+      const SHOWN = 5;
+      const truncationNote = matched > SHOWN
+        ? ` (showing ${Math.min(SHOWN, candidates.length)} of ${matched} matches, most populous first -- narrow the name if none of these is right)`
+        : '';
       const listStr = candidates
-        .slice(0, 5)
+        .slice(0, SHOWN)
         .map(
           c =>
             `• ${c.name} (${c.province || ''}, ${c.country})` +
@@ -261,7 +286,7 @@ export function resolveLocation(input: {
         `Place name "${input.place}" matched multiple candidate cities -- different places, ` +
         `not necessarily different timezones, but far enough apart to change the chart. ` +
         `Ask which one was meant, then retry as \`"${input.place}, <province or country>"\` ` +
-        `or with explicit \`longitude\` and \`timezone\`:\n${listStr}`
+        `or with explicit \`longitude\` and \`timezone\`${truncationNote}:\n${listStr}`
       );
     }
 

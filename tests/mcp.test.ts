@@ -122,7 +122,10 @@ describe('MCP Server Protocol & End-to-End Tests', () => {
 
     expect(response.isError).toBeFalsy();
     const resultObj = JSON.parse(response.content[0].text);
-    expect(resultObj.count).toBeGreaterThan(0);
+    // `count` became `matched` (true hits) plus `shown` (after the cap): a
+    // capped list reporting its own length claimed an exhaustive search.
+    expect(resultObj.matched).toBeGreaterThan(0);
+    expect(resultObj.shown).toBe(resultObj.results.length);
     expect(resultObj.results[0].name).toBe('Urumqi');
     // China civil-time policy: mainland places (incl. Xinjiang) report the
     // civil zone (Beijing time) as `timezone`, with the other geo-tz candidate

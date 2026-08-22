@@ -16,7 +16,7 @@ import { createHash } from 'crypto';
 //   2. The sibling comparison. Only runs on a machine that has all three
 //      checked out, which is where edits actually happen, and is the one that
 //      detects real divergence.
-const SHARED_RESOLVER_MD5 = '09b2c837ff62e0eaf1be09e0b2e7f482';
+const SHARED_RESOLVER_MD5 = 'd882f25e0648b7337fae18974e664287';
 
 const SIBLINGS = [
   '/Users/wesleyliu/Workspace/ziwei/src/geo/resolver.ts',

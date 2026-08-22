@@ -169,8 +169,6 @@ export interface CityEntry {
   province?: string;
   longitude: number;
   latitude: number;
-  /** Municipal population, used only to break same-name ties. */
-  population?: number;
   timezone: string;
   alternateTimezones?: string[];
 }
