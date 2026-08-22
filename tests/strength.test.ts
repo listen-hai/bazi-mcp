@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
+import type { StrengthAssessmentOutput } from '../src/types';
 
 // Golden cases from 韦千里《千里命稿·评断篇》(1935, public domain). The book
 // judges strength in prose and gives no numbers; every weight in this project
@@ -25,7 +26,10 @@ const scoreOf = async (pillars: string) => {
 };
 
 describe('strengthAssessment — 千里命稿 fitting set', () => {
-  const CASES: [string, string, string, number][] = [
+  // Typed with the real union so this file cannot force the public type to
+  // widen to `string` just to satisfy `.toBe()`. A test should never be the
+  // reason an API is less precise than it could be.
+  const CASES: [string, string, StrengthAssessmentOutput['verdict'], number][] = [
     ['陆姓', '癸未 甲子 丙戌 己亥', '身弱', -2.42],
     ['潘姓', '壬子 癸丑 庚子 丁亥', '身弱', -2.48],
     ['陈姓', '壬子 丙午 癸亥 戊午', '身弱', -1.22],
@@ -62,7 +66,7 @@ describe('strengthAssessment — 千里命稿 fitting set', () => {
 });
 
 describe('strengthAssessment — held-out set (parameters locked, never fed back)', () => {
-  const HELD: [string, string, string][] = [
+  const HELD: [string, string, StrengthAssessmentOutput['verdict']][] = [
     ['詹姓', '庚子 庚辰 甲子 戊辰', '身强'],
     ['马占山', '乙酉 丁亥 己丑 甲子', '身弱'],
     ['吴经熊', '己亥 丁卯 乙未 己卯', '身强'],

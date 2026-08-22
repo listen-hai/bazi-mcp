@@ -17,21 +17,21 @@ export interface FourPillarsGanZhi {
   hour: string;
 }
 
+export type Verdict = '身强' | '身弱' | '中和';
+export type Margin = '临界' | null;
+export type Lean = '偏强' | '偏弱' | null;
+
 export interface StrengthAssessment {
   score: number;
-  // Widened to `string`/`string | null` (rather than a literal union) so
-  // callers that hold a plain-string verdict (e.g. read from JSON, or a
-  // loosely-typed test fixture) can compare against these fields without a
-  // cast. The only values ever produced are the literals named below.
-  verdict: string; // '身强' | '身弱' | '中和'
-  margin: string | null; // '临界' | null
-  lean: string | null; // '偏强' | '偏弱' | null
+  /** Literal unions, not `string`. An earlier version widened these so a
+   * loosely-typed test fixture could compare against them -- which made the
+   * public API less precise for every consumer in order to accommodate one
+   * test file. The test was typed properly instead. */
+  verdict: Verdict;
+  margin: Margin;
+  lean: Lean;
   method: string;
 }
-
-type Verdict = '身强' | '身弱' | '中和';
-type Margin = '临界' | null;
-type Lean = '偏强' | '偏弱' | null;
 
 // Selected parameters (`CHOSEN` in calibrate.py) -- one of 172 grid points
 // that passed every fitting-set constraint, picked as a round-number

@@ -179,9 +179,15 @@ export interface StrengthFactorsOutput {
 
 export interface StrengthAssessmentOutput {
   score: number;
-  verdict: string; // 身强 | 身弱 | 中和
-  margin: string | null; // 临界 | null
-  lean: string | null; // 偏强 | 偏弱 | null
+  /** Literal union, not `string`: the three verdicts are the whole API surface
+   * of this field, and a consumer branching on them should get an exhaustive
+   * check rather than a stringly-typed guess. */
+  verdict: '身强' | '身弱' | '中和';
+  /** '临界' when the score sits within 0.5 of the threshold -- present both
+   * readings to the user rather than the verdict alone. */
+  margin: '临界' | null;
+  /** Which way a 中和 chart leans. Null for a decisive verdict. */
+  lean: '偏强' | '偏弱' | null;
   method: string;
 }
 
