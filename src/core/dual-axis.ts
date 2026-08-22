@@ -31,6 +31,7 @@ import {
 } from './time';
 import { resolveLocation } from '../geo/resolver';
 import { getShichenMidpoint, getShichenSamplePoints } from './shichen';
+import { orderHiddenStems } from './hidden-stems';
 
 /**
  * Normalizes pillar output and computes Ten Gods against the true Day Master.
@@ -46,17 +47,9 @@ function formatPillar(
 ): PillarOutput {
   const stemTenGod = isDayPillar ? '日主' : calculateTenGod(dayMasterStem, pillar.stem);
 
-  let rawHiddenStems = pillar.hiddenStems || [];
   // Normalize Si (巳) hidden stem ordering to classical 本气(丙) -> 中气(庚) -> 余气(戊)
   // for complete consistency across all Four Cardinal Branches (寅: 甲丙戊, 申: 庚壬戊, 巳: 丙庚戊, 亥: 壬甲).
-  if (pillar.branch === '巳' && rawHiddenStems.length === 3) {
-    const bing = rawHiddenStems.find(h => h.stem === '丙');
-    const geng = rawHiddenStems.find(h => h.stem === '庚');
-    const wu = rawHiddenStems.find(h => h.stem === '戊');
-    if (bing && geng && wu) {
-      rawHiddenStems = [bing, geng, wu];
-    }
-  }
+  const rawHiddenStems = orderHiddenStems(pillar.branch, pillar.hiddenStems || []);
 
   const hiddenStems = rawHiddenStems.map((h: HiddenStemInfo) => ({
     stem: h.stem,
