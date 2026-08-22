@@ -21,3 +21,4 @@ bun.lockb
 
 # Internal design docs (not for public repo)
 docs/
+CLAUDE.md
