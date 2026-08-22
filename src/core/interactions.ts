@@ -160,6 +160,15 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
     pillarNames: string[],
     potentialElement?: string,
     description?: string,
+    /**
+     * Why this note must end with the invariant sentence: listing the criteria
+     * for transformation hands the verdict to the downstream model, which
+     * rules on it -- measured, 3/3 fresh LLMs answered "does not transform"
+     * and then discarded the root support that never depended on that answer.
+     * Stating what holds either way is what stopped the discount in a
+     * controlled rerun. Declining to adjudicate is not enough if the decline
+     * itself reads as a denial.
+     */
     transformNote?: string
   ) {
     const sortedBranches = [...branches].sort().join('-');
@@ -221,7 +230,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
             potentialElement: sc.element,
             transformed: null,
             description: `Stem Combination (${sc.name})`,
-            transformNote: '是否化神需结合月令得气、争合妒合与引化条件综合判定，本服务不作武断判定',
+            transformNote: '是否化神需结合月令得气、争合妒合与引化条件综合判定，本服务不作武断判定。无论化与不化，参与本局各支所藏的本气/中气/余气对日主的通根帮扶均独立成立，不因未判定化气而失效',
           });
         }
       }
@@ -238,7 +247,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
         pNames,
         d.element,
         `Directional (${d.name})`,
-        '三会局之化气需结合月令得气与透干引化情况，本服务不作武断判定'
+        '三会局之化气需结合月令得气与透干引化情况，本服务不作武断判定。无论化与不化，参与本局各支所藏的本气/中气/余气对日主的通根帮扶均独立成立，不因未判定化气而失效'
       );
     }
   }
@@ -254,7 +263,7 @@ export function detectAllInteractions(pillars: PillarBranches): BranchInteractio
         pNames,
         t.element,
         `Trine (${t.name})`,
-        '三合局之化气需结合月令得气与透干引化情况，本服务不作武断判定'
+        '三合局之化气需结合月令得气与透干引化情况，本服务不作武断判定。无论化与不化，参与本局各支所藏的本气/中气/余气对日主的通根帮扶均独立成立，不因未判定化气而失效'
       );
       fullTrineElements.add(t.element);
     }

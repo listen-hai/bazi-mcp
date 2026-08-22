@@ -277,3 +277,42 @@ describe('Interaction correspondence tables', () => {
     }
   });
 });
+
+describe('a non-adjudicated transformation must not read as a denial', () => {
+  // Measured on this project's real output: three fresh downstream LLMs were
+  // given the 癸酉 丁巳 辛丑 癸巳 chart and asked for day-master strength.
+  // 3/3 judged 身弱 and 3/3 discounted the 巳酉丑三合金局 -- one wrote "这需要
+  // 月令得气和天干引化……不利于金局的成立", answering the very question this
+  // server declines to answer, then discarding the root support that does not
+  // depend on that answer at all.
+  //
+  // Listing the criteria for transformation hands the verdict to a downstream
+  // that will rule, and often rule wrong. The note has to say what survives
+  // regardless -- that is what stopped the discount in the controlled rerun.
+  it('every transformNote states what holds whether or not it transforms', async () => {
+    const { detectAllInteractions } = await import('../src/core/interactions');
+    const found = detectAllInteractions({
+      year: '酉', month: '巳', day: '丑', hour: '巳',
+      yearStem: '癸', monthStem: '丁', dayStem: '辛', hourStem: '癸',
+    }) as { transformNote?: string; transformed?: unknown }[];
+    const withNote = found.filter((f) => f.transformNote);
+    expect(withNote.length).toBeGreaterThan(0);
+    for (const f of withNote) {
+      // The invariant: the constituent branches' own elemental contribution
+      // does not evaporate just because the transformation is unsettled.
+      expect(f.transformNote).toMatch(/无论化与不化|独立成立|不因未判定/);
+    }
+  });
+
+  it('the metal trine in this chart is reported as present, not conditional', async () => {
+    const { detectAllInteractions } = await import('../src/core/interactions');
+    const found = detectAllInteractions({
+      year: '酉', month: '巳', day: '丑', hour: '巳',
+      yearStem: '癸', monthStem: '丁', dayStem: '辛', hourStem: '癸',
+    }) as { type: string; potentialElement?: string; transformNote?: string }[];
+    const trine = found.find((f) => f.type === 'TRINE');
+    expect(trine).toBeDefined();
+    expect(trine!.potentialElement).toBe('metal');
+    expect(trine!.transformNote).toMatch(/通根|帮扶|独立/);
+  });
+});
