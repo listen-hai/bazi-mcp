@@ -144,6 +144,47 @@ export interface DiagnosticsOutput {
   };
 }
 
+export interface MonthOrderFactOutput {
+  monthBranch: string;
+  mainQiStem: string;
+  mainQiElement: string;
+  tenGod: string;
+  relation: string; // 同我 | 生我 | 我生 | 我克 | 克我
+  wangXiangXiuQiuSi: string; // 旺 | 相 | 休 | 囚 | 死
+  twelveStage: string;
+}
+
+export interface RootFactOutput {
+  pillar: 'year' | 'month' | 'day' | 'hour';
+  branch: string;
+  rootLevel: string; // 本气 | 中气 | 余气 | 无
+  rootStem: string | null;
+  label: string | null; // 禄 | 刃 | 长生 | 墓库根 | null
+}
+
+export interface StemSupportFactOutput {
+  pillar: 'year' | 'month' | 'hour';
+  stem: string;
+  tenGod: string;
+  direction: string; // 帮 | 生 | 泄 | 耗 | 克
+}
+
+export interface StrengthFactorsOutput {
+  monthOrder: MonthOrderFactOutput;
+  roots: RootFactOutput[];
+  stemSupport: StemSupportFactOutput[];
+  counts: { helpers: number; drains: number };
+  tableNote: string;
+}
+
+export interface StrengthAssessmentOutput {
+  score: number;
+  verdict: string; // 身强 | 身弱 | 中和
+  margin: string | null; // 临界 | null
+  lean: string | null; // 偏强 | 偏弱 | null
+  method: string;
+}
+
 export interface BaziCalculationResult {
   fourPillars: string;
   pillars: {
@@ -161,6 +202,11 @@ export interface BaziCalculationResult {
   daYun: DaYunOutput;
   interactions: BranchInteractionOutput[];
   diagnostics: DiagnosticsOutput;
+  // Only present when the hour pillar is known -- an unknown birth hour
+  // (`timeUnknown: true`) must not silently score strength from a fabricated
+  // hour, so both fields are simply absent rather than computed from a guess.
+  strengthFactors?: StrengthFactorsOutput;
+  strengthAssessment?: StrengthAssessmentOutput;
 }
 
 export interface CityEntry {

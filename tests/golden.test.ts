@@ -200,7 +200,10 @@ describe('8.1b Full-output shape snapshot', () => {
     expect(res.diagnostics.warnings).toEqual([]);
 
     expect(Object.keys(res).sort()).toEqual(
-      ['daYun', 'dayMaster', 'diagnostics', 'fourPillars', 'interactions', 'pillars'].sort()
+      [
+        'daYun', 'dayMaster', 'diagnostics', 'fourPillars', 'interactions', 'pillars',
+        'strengthAssessment', 'strengthFactors',
+      ].sort()
     );
 
     expect(Object.keys(res.diagnostics).sort()).toEqual(

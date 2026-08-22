@@ -32,6 +32,8 @@ import {
 import { resolveLocation } from '../geo/resolver';
 import { getShichenMidpoint, getShichenSamplePoints } from './shichen';
 import { orderHiddenStems } from './hidden-stems';
+import { assessStrength } from './strength';
+import { computeStrengthFactors } from './strength-factors';
 
 /**
  * Normalizes pillar output and computes Ten Gods against the true Day Master.
@@ -543,6 +545,22 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
     ? `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`
     : `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} ${hourPillar!.ganZhi}`;
 
+  // Strength (旺衰) needs all four pillars, so an unknown birth hour must not
+  // fabricate one for it -- these two fields are simply omitted rather than
+  // scored from a guessed hour (hourPillar is null exactly when timeUnknown).
+  let strengthFactors: BaziCalculationResult['strengthFactors'];
+  let strengthAssessment: BaziCalculationResult['strengthAssessment'];
+  if (hourPillar) {
+    const fourGanZhi = {
+      year: yearPillar.ganZhi,
+      month: monthPillar.ganZhi,
+      day: dayPillar.ganZhi,
+      hour: hourPillar.ganZhi,
+    };
+    strengthFactors = computeStrengthFactors(fourGanZhi);
+    strengthAssessment = assessStrength(fourGanZhi);
+  }
+
   // 9. Format Da Yun (strictly from Axis A) with nominal age
   const daYunCycles = A.daYun.cycles.map(c => ({
     index: c.index,
@@ -639,6 +657,8 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
     daYun,
     interactions,
     diagnostics,
+    strengthFactors,
+    strengthAssessment,
   };
 }
 
