@@ -674,12 +674,20 @@ function ambiguousPillar(a: PillarOutput, b: PillarOutput): PillarOutput {
  *     `diagnostics.pillarCandidates` and warn, rather than silently picking
  *     the noon-side (or any other) value.
  *
- * The sampling deliberately stops at 22:59 rather than 23:59: under sect=2
- * (the default), 23:00-23:59 is 早子时 and always belongs to the next
- * calendar day by definition (see the "Late Zi hour" warning above for
- * sect=1) -- every single day, solar term or not. That is an already-known,
- * already-documented rule, not the kind of silent, hour-dependent guess this
- * fix targets, so it is intentionally out of scope here.
+ * The two endpoints stop at 22:59 because a third sample handles the last
+ * hour separately. Under sect=2 (the default) 23:00-23:59 is 早子时 and rolls
+ * the day pillar to the next calendar day -- every single day, solar term or
+ * not. It is tempting to call that out of scope because the rule is
+ * well-known and documented, but documentation of a rule says nothing about
+ * whether an OUTPUT is certain: a caller with no birth time still cannot tell
+ * which day pillar they have, and roughly one birth in twenty-four falls in
+ * that hour.
+ *
+ * Reporting it as a 50/50 candidate pair would be its own distortion, though
+ * -- twenty-three hours of the day give one value. So the likely value is
+ * stated plainly and the alternative is named alongside the window that
+ * produces it (`diagnostics.dayPillarAlternative`). Asymmetric uncertainty
+ * gets an asymmetric answer.
  *
  * Da Yun's start date is far more hour-sensitive than the pillars (it
  * tracks fractional days to the nearest solar term boundary), so it is
@@ -689,6 +697,9 @@ function ambiguousPillar(a: PillarOutput, b: PillarOutput): PillarOutput {
 function calculateUnknownTimeBazi(input: BaziInput): BaziCalculationResult {
   const start = computeAxes(input, { hour: 0, minute: 0 });
   const end = computeAxes(input, { hour: 22, minute: 59 });
+  // The 早子時 hour, sampled separately -- see the note above on why it is
+  // disclosed rather than either hidden or averaged into a candidate pair.
+  const lateZi = computeAxes(input, { hour: 23, minute: 30 });
 
   const warnings = [...start.diagnostics.warnings];
   const pillarCandidates: NonNullable<DiagnosticsOutput['pillarCandidates']> = {};
@@ -708,14 +719,33 @@ function calculateUnknownTimeBazi(input: BaziInput): BaziCalculationResult {
   const monthPillar = mergePillar('month', 'month pillar');
   const dayPillar = mergePillar('day', 'day pillar');
 
+  // The 早子時 hour rolls the day pillar to the next day on EVERY date. State
+  // the 23-hour-majority value plainly, then name what the last hour gives.
+  let dayPillarAlternative: { ganZhi: string; window: string } | undefined;
+  if (lateZi.pillars.day!.ganZhi !== dayPillar.ganZhi && !pillarCandidates.day) {
+    dayPillarAlternative = {
+      ganZhi: lateZi.pillars.day!.ganZhi,
+      window: '23:00-24:00 local (早子時 rolls the day pillar to the next day)',
+    };
+    warnings.push(
+      `Birth time is unknown: the day pillar is ${dayPillar.ganZhi} for a birth before 23:00, ` +
+      `but ${lateZi.pillars.day!.ganZhi} for one in the 23:00-24:00 早子時 hour. ` +
+      `See diagnostics.dayPillarAlternative.`
+    );
+  }
+
   const fourPillars = `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`;
 
-  const startDay = start.daYun.startDate.slice(0, 10);
-  const endDay = end.daYun.startDate.slice(0, 10);
-  const daYunStartDate = startDay === endDay
-    ? `${startDay} (Asia/Shanghai, hour unknown)`
-    : `${startDay} to ${endDay} (Asia/Shanghai, hour unknown -- Da Yun start depends on birth hour)`;
-  if (startDay !== endDay || start.daYun.isForward !== end.daYun.isForward) {
+  // Order the range, do not just concatenate the samples: 大运 start does not
+  // move monotonically with the birth hour and its direction can flip, so the
+  // 00:00 sample is not necessarily the earlier date. Sampling order once
+  // produced "2031-10-05 to 2031-06-15".
+  const [earlyDay, lateDay] = [start.daYun.startDate.slice(0, 10), end.daYun.startDate.slice(0, 10)]
+    .sort();
+  const daYunStartDate = earlyDay === lateDay
+    ? `${earlyDay} (Asia/Shanghai, hour unknown)`
+    : `${earlyDay} to ${lateDay} (Asia/Shanghai, hour unknown -- Da Yun start depends on birth hour)`;
+  if (earlyDay !== lateDay || start.daYun.isForward !== end.daYun.isForward) {
     warnings.push(
       `Da Yun (大运) start date${start.daYun.isForward !== end.daYun.isForward ? ' and direction' : ''} cannot be pinned down without a known birth hour; see daYun.startDate for the range.`
     );
@@ -738,6 +768,7 @@ function calculateUnknownTimeBazi(input: BaziInput): BaziCalculationResult {
       ...start.diagnostics,
       warnings,
       pillarCandidates: Object.keys(pillarCandidates).length > 0 ? pillarCandidates : undefined,
+      dayPillarAlternative,
     },
   };
 }

@@ -125,6 +125,17 @@ export interface DiagnosticsOutput {
     month?: [string, string];
     day?: [string, string];
   };
+  /**
+   * The 早子時 hour (23:00-24:00) rolls the day pillar to the next calendar
+   * day on every date, so an unknown birth time always leaves it open. Unlike
+   * `pillarCandidates` this is deliberately ASYMMETRIC: `pillars.day` holds
+   * the value 23 of the day's 24 hours produce, and this names the one the
+   * remaining hour produces, with that window.
+   */
+  dayPillarAlternative?: {
+    ganZhi: string;
+    window: string;
+  };
   warnings: string[];
   engineInfo: {
     baziEngine: string;

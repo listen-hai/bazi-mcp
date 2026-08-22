@@ -52,19 +52,68 @@ describe('timeUnknown must not fabricate a time', () => {
     expect(JSON.stringify(r.daYun)).not.toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
   });
 
-  it('an ordinary day, where nothing flips, stays clean and unwarned', () => {
-    // Degradation must be proportionate: if the date alone settles the pillars,
-    // say so plainly rather than hedging everything.
+  it('an ordinary day settles the YEAR and MONTH pillars outright', () => {
+    // Degradation must be proportionate. Away from a solar-term boundary the
+    // date alone fixes the year and month pillars, and hedging those would be
+    // its own kind of dishonesty.
     const r = calculateDualAxisBazi({
       solarDate: { year: 2024, month: 6, day: 15 }, place: 'Beijing', gender: 'male',
       timeUnknown: true,
-    } as never) as never as { diagnostics: { pillarCandidates?: unknown } };
-    expect(r.diagnostics.pillarCandidates ?? null).toBeNull();
+    } as never) as never as {
+      pillars: Record<string, { ganZhi: string }>;
+      diagnostics: { pillarCandidates?: Record<string, unknown> };
+    };
+    expect(r.pillars.year.ganZhi).toBe('甲辰');
+    expect(r.pillars.month.ganZhi).toBe('庚午');
+    expect(r.diagnostics.pillarCandidates?.year ?? null).toBeNull();
+    expect(r.diagnostics.pillarCandidates?.month ?? null).toBeNull();
+  });
+
+  it('the DAY pillar is qualified on every unknown-time chart, not just special days', () => {
+    // Under the default 早子时 rule the day pillar rolls at 23:00, so the last
+    // hour of every day belongs to the next one. An earlier version of this
+    // suite asserted that an ordinary day "flips nothing" -- a false premise
+    // that pushed the implementation into sampling only to 22:59, which hid
+    // real ambiguity rather than reporting it. Measured on 2024-06-15 Beijing:
+    // 23:00 gives 庚戌, 23:30 gives 辛亥.
+    const r = calculateDualAxisBazi({
+      solarDate: { year: 2024, month: 6, day: 15 }, place: 'Beijing', gender: 'male',
+      timeUnknown: true,
+    } as never) as never as {
+      pillars: Record<string, { ganZhi: string }>;
+      diagnostics: { warnings?: string[]; dayPillarAlternative?: { ganZhi: string; window: string } };
+    };
+    // The overwhelmingly likely value is still stated plainly -- 23 hours of
+    // the day give it. This is disclosure, not a 50/50 candidate list.
+    expect(r.pillars.day.ganZhi).toBe('庚戌');
+    // ...but the other hour is named, with the window that produces it.
+    expect(r.diagnostics.dayPillarAlternative?.ganZhi).toBe('辛亥');
+    expect(r.diagnostics.dayPillarAlternative?.window).toMatch(/23/);
   });
 
   it('an exact time is unaffected by any of this', () => {
     const r = AT({ clockTime: { hour: 20, minute: 0 } });
     expect(r.fourPillars).toBe('甲辰 丙寅 戊戌 壬戌');
     expect(r.diagnostics.warnings ?? []).toHaveLength(0);
+  });
+
+  it('the Da Yun range reads in chronological order', () => {
+    // The two samples are the ends of the birth DAY, not the ends of the
+    // resulting range: 大运 start does not move monotonically with the birth
+    // hour, and the direction can flip outright. Concatenating the samples in
+    // sampling order produced "2031-10-05 to 2031-06-15".
+    for (const solarDate of [
+      { year: 2024, month: 6, day: 15 },
+      { year: 2024, month: 2, day: 4 },
+      { year: 1990, month: 11, day: 7 },
+    ]) {
+      const r = calculateDualAxisBazi({
+        solarDate, place: 'Beijing', gender: 'male', timeUnknown: true,
+      } as never) as never as { daYun: { startDate: string } };
+      const dates = r.daYun.startDate.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
+      if (dates.length === 2) {
+        expect(new Date(dates[0]).getTime()).toBeLessThanOrEqual(new Date(dates[1]).getTime());
+      }
+    }
   });
 });
