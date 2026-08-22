@@ -1,6 +1,6 @@
 {
   "name": "@lhk714/bazi-mcp",
-  "version": "2.1.5",
+  "version": "3.0.0",
   "description": "Deterministic, dual-axis Bazi chart calculation MCP Server with True Solar Time and global IANA DST support",
   "main": "dist/index.js",
   "type": "module",

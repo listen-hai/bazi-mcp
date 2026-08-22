@@ -111,7 +111,7 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 | `lunarDateFrame` | string | Optional | `"local"` (default) or `"beijing"` |
 | `clockTime` | object | Optional** | Local wall clock time `{ "hour": 11, "minute": 27 }` |
 | `shichen` | string | Optional** | Traditional Chinese two-hour branch (`'子'` to `'亥'`) |
-| `timeUnknown` | boolean | Optional** | Set `true` for a 3-pillar chart |
+| `timeUnknown` | boolean | Optional** | Set `true` for a 3-pillar chart. The remaining three pillars are **not** silently computed from a substituted noon — see [Unknown birth time](#unknown-birth-time) |
 | `dstFold` | number | Optional | `0` (DST) or `1` (Standard) for ambiguous fall-back overlap hours |
 | `gender` | string | **Required** | `"male"` (乾造) or `"female"` (坤造) |
 | `sect` | number | Optional | `2` (default, 23:00 Zi-hour rollover / 子初换日, self-consistent with rat-chasing cycle 五鼠遁) or `1` (00:00 midnight day rollover / 子正换日) |
@@ -127,6 +127,16 @@ Calculates Four Pillars, Day Master, Da Yun (Major Luck Cycles labeled with nomi
 
 ### 2. `lookup_location`
 Resolves city names to coordinates, administrative regions, and official IANA timezone identifiers across 7,329 global cities in 227 countries.
+
+**Ambiguous names are refused, never guessed** — including same-name cities that share a timezone. Columbus OH and Columbus GA are both `America/New_York` but sit 2° of longitude apart: 8 minutes of true solar time, enough to cross a 時辰 boundary. A refusal returns `{ code, message, matched, candidates }`, where `matched` is the true hit count so a capped list never reads as exhaustive, and candidates carry identifying fields only (no population — that is a ranking prior, not an identifier).
+
+## Unknown birth time
+
+`timeUnknown: true` nulls the hour pillar, but the other three and the 大運 sequence are **not** derived from a substituted time.
+
+- The year, month and day pillars are evaluated at both ends of the local day. Where they agree, they are reported plainly. Where a solar term falls inside the day and they disagree, both land in `diagnostics.pillarCandidates` with a warning — no side is silently chosen.
+- The 早子時 hour (23:00–24:00) rolls the day pillar on **every** date, not just special ones. That uncertainty is asymmetric — 23 of 24 hours give one value — so it is reported asymmetrically: `pillars.day` holds the majority value and `diagnostics.dayPillarAlternative` names the other with its window. A 50/50 candidate pair would misstate how much is actually unknown.
+- `daYun.startDate` becomes a date range. Measured on 2024-02-04 in Beijing, the 起運 date swings across three months over one unknown day; a to-the-second answer there is a fabrication.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
