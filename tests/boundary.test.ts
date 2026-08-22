@@ -95,6 +95,73 @@ describe('8.5 Boundary, DST & Edge Case Tests', () => {
     expect(fold0.pillars.hour?.ganZhi).not.toBe(fold1.pillars.hour?.ganZhi);
   });
 
+  /**
+   * China observed daylight saving time (夏令时) every year from 1986 through 1991,
+   * and only those years: summer clocks ran at UTC+9, winter clocks at UTC+8. A flat
+   * "China is always UTC+8" shortcut is therefore wrong for six full summers of birth
+   * records, and it is a tempting shortcut precisely because the country has had a
+   * single civil timezone since 1949. Nothing in src/core/time.ts hard-codes this —
+   * the offset comes from Intl/the IANA database — so this test is what stops a future
+   * "simplification" to a constant +08:00 from passing silently.
+   *
+   * golden.test.ts already pins the summer offset itself; what this test adds is the
+   * contrast (summer vs winter vs a modern year) and the downstream consequence for the
+   * hour pillar, so it is not redundant with it.
+   *
+   * 1990's DST ran mid-April to mid-September, so June 15 08:00 is well clear of both
+   * the spring-forward gap and the fall-back fold the tests above cover; no dstFold is
+   * needed here.
+   */
+  describe("China's 1986-1991 daylight saving time", () => {
+    const beijing = (year: number, month: number, day: number, hour: number) =>
+      calculateDualAxisBazi({
+        timezone: 'Asia/Shanghai',
+        longitude: 116.4074,
+        solarDate: { year, month, day },
+        clockTime: { hour, minute: 0 },
+        gender: 'male',
+      });
+
+    it('resolves a summer birth in the DST years to UTC+9, and winter and modern births to UTC+8', () => {
+      const summer1990 = beijing(1990, 6, 15, 8);
+      expect(summer1990.diagnostics.utcOffset).toContain('+09:00');
+      expect(summer1990.diagnostics.utcOffset).toContain('DST in effect');
+      expect(summer1990.diagnostics.utcInstant).toBe('1990-06-14T23:00:00.000Z');
+
+      // Same wall clock, same place, winter of the same DST year: back to +08:00.
+      const winter1990 = beijing(1990, 1, 15, 8);
+      expect(winter1990.diagnostics.utcOffset).toContain('+08:00');
+      expect(winter1990.diagnostics.utcOffset).not.toContain('DST');
+      expect(winter1990.diagnostics.utcInstant).toBe('1990-01-15T00:00:00.000Z');
+
+      // Same wall clock, same summer date, after 1991: also +08:00. This kills the
+      // mirror-image mistake of assuming Chinese summers are always UTC+9.
+      const modern = beijing(2024, 6, 15, 8);
+      expect(modern.diagnostics.utcOffset).toContain('+08:00');
+      expect(modern.diagnostics.utcOffset).not.toContain('DST');
+      expect(modern.diagnostics.utcInstant).toBe('2024-06-15T00:00:00.000Z');
+    });
+
+    it('moves the hour pillar to the adjacent shichen when the DST hour is lost', () => {
+      // A hard-coded +08:00 would read this 08:00 birth as 1990-06-15T00:00:00Z. That is
+      // exactly the instant the real +09:00 offset assigns to a 09:00 birth, so charting
+      // 09:00 reproduces the broken result without simulating a bug — same date, same
+      // day pillar (辛亥), so the only thing that moves is the DST hour.
+      const correct = beijing(1990, 6, 15, 8);
+      const asIfFlatUtc8 = beijing(1990, 6, 15, 9);
+      expect(asIfFlatUtc8.diagnostics.utcInstant).toBe('1990-06-15T00:00:00.000Z');
+
+      expect(correct.pillars.day.ganZhi).toBe('辛亥');
+      expect(asIfFlatUtc8.pillars.day.ganZhi).toBe('辛亥');
+
+      // 08:00 wall clock -> 06:45 true solar (卯, 05:00-06:59); the lost hour pushes it
+      // to 07:45 (辰), across the 07:00 boundary. Five Rats from a 辛 day: 戊子, 己丑,
+      // 庚寅, 辛卯, 壬辰.
+      expect(correct.pillars.hour?.ganZhi).toBe('辛卯');
+      expect(asIfFlatUtc8.pillars.hour?.ganZhi).toBe('壬辰');
+    });
+  });
+
   // 4. Genuine leap lunar month support (2020 leap 4th month 15th -> day pillar 庚辰)
   it('Should correctly calculate valid leap lunar month', () => {
     const res = calculateDualAxisBazi({
