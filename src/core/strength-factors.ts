@@ -21,7 +21,7 @@ type Direction = '帮' | '生' | '泄' | '耗' | '克';
 type WangXiangXiuQiuSi = '旺' | '相' | '休' | '囚' | '死';
 type PillarName = 'year' | 'month' | 'day' | 'hour';
 type RootLevel = '本气' | '中气' | '余气' | '无';
-type RootLabel = '禄' | '刃' | '长生' | '墓库根' | null;
+type RootLabel = '禄' | '刃' | '长生' | '墓库根';
 
 const GENERATES: Record<Element, Element> = {
   wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood',
@@ -90,13 +90,29 @@ export function verifyTwelveStageAnchors(): boolean {
   return true;
 }
 
-function labelFor(dayStem: string, branch: string): RootLabel {
+/**
+ * The four storehouse branches and the stem each stores. 墓库根 is decided by
+ * what a branch HIDES, not by where the day stem lands on the twelve-stage
+ * cycle. The two coincide for yang stems and diverge for yin ones, which run
+ * the cycle backward: 辛 reaches 墓 at 辰 but the metal storehouse is 丑, where
+ * 辛 sits at 养. Judging by stage silently drops a real root -- on the
+ * 癸酉 丁巳 辛丑 癸巳 chart it drops the day master's own seat.
+ */
+const STOREHOUSE: Record<string, string> = { 未: '乙', 戌: '丁', 丑: '辛', 辰: '癸' };
+
+/**
+ * Returns every label a branch earns for this day stem. A list, not a single
+ * value: nothing stops one branch from qualifying twice, and an
+ * order-dependent first-match-wins would decide which fact to hide.
+ */
+function labelsFor(dayStem: string, branch: string): RootLabel[] {
+  const labels: RootLabel[] = [];
   const stage = stageOf(dayStem, branch);
-  if (stage === '临官') return '禄';
-  if (stage === '帝旺' && STEM_TO_POLARITY[dayStem] === 'yang') return '刃';
-  if (stage === '长生') return '长生';
-  if (stage === '墓') return '墓库根';
-  return null;
+  if (stage === '临官') labels.push('禄');
+  if (stage === '帝旺' && STEM_TO_POLARITY[dayStem] === 'yang') labels.push('刃');
+  if (stage === '长生') labels.push('长生');
+  if (STOREHOUSE[branch] === dayStem) labels.push('墓库根');
+  return labels;
 }
 
 function hiddenStemsOf(branch: string): { stem: string }[] {
@@ -120,7 +136,9 @@ export interface RootFact {
   branch: string;
   rootLevel: RootLevel;
   rootStem: string | null;
-  label: RootLabel;
+  /** Every label this branch earns for the day stem -- a list, because one
+   * branch can qualify more than once and picking a winner would hide a fact. */
+  tags: RootLabel[];
 }
 
 export interface StemSupportFact {
@@ -169,7 +187,7 @@ export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFact
         break;
       }
     }
-    return { pillar, branch, rootLevel, rootStem, label: labelFor(dayStem, branch) };
+    return { pillar, branch, rootLevel, rootStem, tags: labelsFor(dayStem, branch) };
   });
 
   const stemPositions: Array<['year' | 'month' | 'hour', string]> = [

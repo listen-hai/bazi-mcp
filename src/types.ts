@@ -157,9 +157,15 @@ export interface MonthOrderFactOutput {
 export interface RootFactOutput {
   pillar: 'year' | 'month' | 'day' | 'hour';
   branch: string;
-  rootLevel: string; // 本气 | 中气 | 余气 | 无
+  rootLevel: '本气' | '中气' | '余气' | '无';
   rootStem: string | null;
-  label: string | null; // 禄 | 刃 | 长生 | 墓库根 | null
+  /**
+   * Every label this branch earns for the day stem. A list, not one value:
+   * a branch can qualify more than once, and 墓库根 is decided by what the
+   * branch HIDES rather than by the twelve-stage position -- the two diverge
+   * for yin stems, which run the cycle backward.
+   */
+  tags: ('禄' | '刃' | '长生' | '墓库根')[];
 }
 
 export interface StemSupportFactOutput {

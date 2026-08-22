@@ -113,3 +113,47 @@ describe('strengthAssessment — honesty of the verdict itself', () => {
     expect(r.method).toMatch(/校准|拟合/);   // must not read as if the book supplied numbers
   });
 });
+
+describe('strengthFactors — root labels follow hidden stems, not the stage table', () => {
+  const factorsOf = async (input: Record<string, unknown>) => {
+    const r = calculateDualAxisBazi(input as never) as never as {
+      strengthFactors: {
+        roots: { pillar: string; branch: string; rootLevel: string; tags: string[] }[];
+        monthOrder: Record<string, unknown>;
+      };
+    };
+    return r.strengthFactors;
+  };
+  const WIFE = {
+    solarDate: { year: 1993, month: 5, day: 20 }, clockTime: { hour: 9, minute: 40 },
+    place: 'Tianjin', gender: 'female',
+  };
+
+  it('丑 is the metal storehouse for a 辛 day master, even though 辛 sits at 养 there', async () => {
+    // The spec is explicit that 墓库根 is decided by the hidden stems (丑藏辛),
+    // NOT by the twelve-stage 墓 position -- they fall on different branches
+    // for yin stems, which run backward. 辛 reaches 墓 at 辰 and 养 at 丑, so a
+    // stage-based test silently drops the storehouse root that 丑 actually is.
+    // On this chart that root is one of the reasons the day master is strong.
+    const f = await factorsOf(WIFE);
+    const day = f.roots.find((r) => r.pillar === 'day')!;
+    expect(day.branch).toBe('丑');
+    expect(day.rootLevel).toBe('余气');
+    expect(day.tags).toContain('墓库根');
+  });
+
+  it('酉 is the 禄 of 辛 and both labels can coexist on one chart', async () => {
+    const f = await factorsOf(WIFE);
+    expect(f.roots.find((r) => r.pillar === 'year')!.tags).toContain('禄');
+  });
+
+  it('labels are a list — a branch may qualify for more than one', async () => {
+    const f = await factorsOf(WIFE);
+    for (const r of f.roots) expect(Array.isArray(r.tags)).toBe(true);
+  });
+
+  it('the twelve-stage position is still reported, just not used for the label', async () => {
+    const f = await factorsOf(WIFE);
+    expect(f.monthOrder.twelveStage).toBe('死');   // 辛 in 巳
+  });
+});
