@@ -47,6 +47,24 @@ any of this.
 
 ## Changing a weight
 
-Rerun BOTH sets and update the provenance table in `docs/spec.md`. **Never tune
+Rerun BOTH sets and update the table in this file's `## Chosen parameters`
+section below. **Never tune
 a parameter to turn a single test green** — that is the failure mode this
 directory exists to prevent.
+
+## Chosen parameters
+
+Every one of these is fitted here, not taken from 千里命稿 — the book gives no
+numbers. Changing any of them means rerunning both sets above.
+
+| param | value | what it scales |
+|---|---|---|
+| `stem` | 0.6 | a non-day stem's contribution |
+| `zhong` / `yu` | 0.5 / 0.3 | middle / residual hidden qi, against 本气 = 1.0 |
+| `year` / `month` / `day` / `hour` | 1.0 / 2.5 / 1.5 / 1.0 | branch position |
+| `ju` | 2.5 | a complete 三合 or 三会 |
+| `ban` | 1.5 | a 生旺半合 whose full combination is absent |
+| `k` | 0.6 | how much less a 克泄耗 term counts than a 帮扶 one |
+| `theta` | 1.0 | the 身强 / 身弱 threshold |
+
+`margin: '临界'` fires when `| |score| − theta | ≤ 0.5`.

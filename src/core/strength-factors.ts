@@ -91,14 +91,25 @@ export function verifyTwelveStageAnchors(): boolean {
 }
 
 /**
- * The four storehouse branches and the stem each stores. 墓库根 is decided by
- * what a branch HIDES, not by where the day stem lands on the twelve-stage
- * cycle. The two coincide for yang stems and diverge for yin ones, which run
- * the cycle backward: 辛 reaches 墓 at 辰 but the metal storehouse is 丑, where
- * 辛 sits at 养. Judging by stage silently drops a real root -- on the
- * 癸酉 丁巳 辛丑 癸巳 chart it drops the day master's own seat.
+ * The four storehouse branches and the ELEMENT each stores. This criterion got
+ * it wrong twice in opposite directions, so both are recorded:
+ *
+ *  1. By twelve-stage 墓 position — coincides with the storehouse for yang
+ *     stems and diverges for yin ones, which run the cycle backward. 辛 reaches
+ *     墓 at 辰 while the metal storehouse is 丑, where 辛 sits at 养. Every yin
+ *     day master lost the label, including 辛 on its own seat.
+ *  2. By exact hidden STEM — 未 hides 乙, so 甲 never matched, and every YANG
+ *     day master lost it instead. Worse, the rootLevel computed four lines
+ *     below already counted 甲 as rooted in 未 by element: one file, two
+ *     definitions of "has a root".
+ *
+ * Element matching is the one that agrees with rootLevel. 戊 on 戌 stays
+ * unlabelled and should: 戌 is the FIRE storehouse; that 戌 also happens to
+ * hide 戊 as its main qi makes it a 本气 root, not a storehouse one.
  */
-const STOREHOUSE: Record<string, string> = { 未: '乙', 戌: '丁', 丑: '辛', 辰: '癸' };
+const STOREHOUSE_ELEMENT: Record<string, string> = {
+  未: 'wood', 戌: 'fire', 丑: 'metal', 辰: 'water',
+};
 
 /**
  * Returns every label a branch earns for this day stem. A list, not a single
@@ -111,7 +122,7 @@ function labelsFor(dayStem: string, branch: string): RootLabel[] {
   if (stage === '临官') labels.push('禄');
   if (stage === '帝旺' && STEM_TO_POLARITY[dayStem] === 'yang') labels.push('刃');
   if (stage === '长生') labels.push('长生');
-  if (STOREHOUSE[branch] === dayStem) labels.push('墓库根');
+  if (STOREHOUSE_ELEMENT[branch] === STEM_TO_ELEMENT[dayStem]) labels.push('墓库根');
   return labels;
 }
 

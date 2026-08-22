@@ -657,8 +657,14 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
     daYun,
     interactions,
     diagnostics,
-    strengthFactors,
-    strengthAssessment,
+    // Spread conditionally so the KEYS disappear too, not just their values.
+    // `strengthFactors: undefined` still answers true to `'strengthFactors' in
+    // result` -- that is a placeholder, and this project's own rule (see the
+    // date-only mode) is that an undeterminable field is absent, never a
+    // placeholder. JSON.stringify happens to drop undefined, so the wire
+    // format was already right; a consumer holding the object was not.
+    ...(strengthFactors ? { strengthFactors } : {}),
+    ...(strengthAssessment ? { strengthAssessment } : {}),
   };
 }
 

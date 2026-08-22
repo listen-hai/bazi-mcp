@@ -165,6 +165,13 @@ export interface RootFactOutput {
    * branch HIDES rather than by the twelve-stage position -- the two diverge
    * for yin stems, which run the cycle backward.
    */
+  /**
+   * NOTE on 长生: it is a stage fact, not evidence of a root. Every yin stem's
+   * 长生 branch (乙午 丁酉 己酉 辛子 癸卯) hides no stem of the same element, so
+   * this tag can appear alongside `rootLevel: '无'`. Whether 阴长生 counts as
+   * a root is a live dispute; this server reports the position and takes no
+   * side.
+   */
   tags: ('禄' | '刃' | '长生' | '墓库根')[];
 }
 
@@ -179,6 +186,14 @@ export interface StrengthFactorsOutput {
   monthOrder: MonthOrderFactOutput;
   roots: RootFactOutput[];
   stemSupport: StemSupportFactOutput[];
+  /**
+   * Equal-weight tally over the seven non-day-master positions: the three
+   * stems by their own element, and all four branches by their MAIN QI only
+   * (middle and residual qi are not counted here -- read `roots` for those).
+   * `drains` merges 泄/耗/克 into one bucket. Both choices are simplifications,
+   * which is why the denominator is spelled out: a bare count whose basis the
+   * caller cannot recover is a weight in disguise.
+   */
   counts: { helpers: number; drains: number };
   tableNote: string;
 }
