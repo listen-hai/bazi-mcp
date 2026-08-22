@@ -1,6 +1,12 @@
 import { STEM_TO_ELEMENT, STEM_TO_POLARITY, BRANCH_HIDDEN_STEMS, calculateTenGod, getMainQi } from '@openfate/bazi-engine';
 import { orderHiddenStems } from './hidden-stems';
-import { FourPillarsGanZhi } from './strength';
+/** Four pillars as 干支 strings, e.g. { year: '癸酉', ... }. */
+export interface FourPillarsGanZhi {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+}
 
 /**
  * Zero-weight, deterministic strength FACTS -- no weight, no threshold, no

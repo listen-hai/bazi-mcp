@@ -1,125 +1,19 @@
 import { describe, expect, it } from 'bun:test';
 import { calculateDualAxisBazi } from '../src/core/dual-axis';
-import type { StrengthAssessmentOutput } from '../src/types';
 import { computeStrengthFactors } from '../src/core/strength-factors';
 
-// Golden cases from 韦千里《千里命稿·评断篇》(1935, public domain). The book
-// judges strength in prose and gives no numbers; every weight in this project
-// is FITTED, and scripts/strength-calibration/ is where that fitting lives.
-// Rerun it before touching a weight -- and never tune one to turn a single
-// case green.
+// This server calculates; it does not infer. `strengthFactors` is a
+// zero-weight ledger of table lookups -- roots, hidden-stem qi levels,
+// 旺相休囚死, twelve-stage positions -- and stops there.
 //
-// Fitting set constrains the grid search. Held-out set was scored with the
-// parameters locked and never fed back; it is the only evidence the weights
-// generalise rather than memorise.
+// v3.1.0 briefly shipped a `strengthAssessment` that scored those factors into
+// 身强/身弱 using weights fitted by this project. The justification was that a
+// score under a named method is a deterministic fact about that method. It is
+// not enough: the classic supplies the qualitative rules, the numbers were
+// ours, so the "fact" was about a table we invented. Naming a method makes it
+// reproducible, not true. Removed in v4.0.0 -- see docs/spec.md.
 
-const chart = (pillars: string) => {
-  // Cases are given as four pillars directly, so they are asserted against the
-  // scoring layer rather than re-derived from a birth moment -- the book gives
-  // pillars, not birth times.
-  const [year, month, day, hour] = pillars.split(' ');
-  return { year, month, day, hour };
-};
 
-const scoreOf = async (pillars: string) => {
-  const { assessStrength } = await import('../src/core/strength');
-  return assessStrength(chart(pillars) as never);
-};
-
-describe('strengthAssessment — 千里命稿 fitting set', () => {
-  // Typed with the real union so this file cannot force the public type to
-  // widen to `string` just to satisfy `.toBe()`. A test should never be the
-  // reason an API is less precise than it could be.
-  const CASES: [string, string, StrengthAssessmentOutput['verdict'], number][] = [
-    ['陆姓', '癸未 甲子 丙戌 己亥', '身弱', -2.42],
-    ['潘姓', '壬子 癸丑 庚子 丁亥', '身弱', -2.48],
-    ['陈姓', '壬子 丙午 癸亥 戊午', '身弱', -1.22],
-    ['孙君', '乙巳 戊子 乙巳 戊寅', '中和', 0.20],
-    ['金君', '己亥 乙亥 丙戌 壬辰', '身弱', -1.65],
-    ['悍匪', '壬午 丙午 丙戌 庚寅', '身强', 5.25],
-    ['荣宗敬', '癸酉 庚申 戊午 甲寅', '中和', 0.77],
-    ['陆维屏', '乙未 甲申 癸巳 丙辰', '中和', 0.12],
-    ['友人', '乙巳 甲申 癸未 丙辰', '中和', -0.28],
-    ['妻', '癸酉 丁巳 辛丑 癸巳', '身强', 4.62],
-    ['蒋介石', '丁亥 庚戌 己巳 庚午', '身强', 4.48],
-  ];
-
-  for (const [name, pillars, verdict, score] of CASES) {
-    it(`${name} ${pillars} -> ${verdict} (${score >= 0 ? '+' : ''}${score})`, async () => {
-      const r = await scoreOf(pillars);
-      expect(r.score).toBeCloseTo(score, 2);
-      expect(r.verdict).toBe(verdict);
-    });
-  }
-
-  it('潘姓 scores below 陆姓 — the book ranks it 弱不堪言', async () => {
-    expect((await scoreOf('壬子 癸丑 庚子 丁亥')).score)
-      .toBeLessThan((await scoreOf('癸未 甲子 丙戌 己亥')).score);
-  });
-
-  it('陆维屏 outscores 友人 — same characters, year and day branches swapped', async () => {
-    // The book calls one 身不为弱 and the other 较弱. Identical stems and
-    // three identical branches: this pair is the existence proof that pillar
-    // position must carry weight at all.
-    expect((await scoreOf('乙未 甲申 癸巳 丙辰')).score)
-      .toBeGreaterThan((await scoreOf('乙巳 甲申 癸未 丙辰')).score);
-  });
-});
-
-describe('strengthAssessment — held-out set (parameters locked, never fed back)', () => {
-  const HELD: [string, string, StrengthAssessmentOutput['verdict']][] = [
-    ['詹姓', '庚子 庚辰 甲子 戊辰', '身强'],
-    ['马占山', '乙酉 丁亥 己丑 甲子', '身弱'],
-    ['吴经熊', '己亥 丁卯 乙未 己卯', '身强'],
-    ['交禄格', '癸酉 庚申 壬子 辛亥', '身强'],
-    // 颜惠庆 is pinned at 身强 while the book reads it 得令未获气势之盛 --
-    // roughly 中和 to 偏强. +1.48 lands just past the line, so this is an
-    // adjacent-band result kept as a regression pin, not a claim the model
-    // agrees with 韦千里 here. 王姓 (+0.70) and 吴佩孚 (-0.82) are the other two
-    // adjacent-band cases; they are deliberately left out of the assertions
-    // rather than pinned to a verdict the book does not clearly support.
-    ['颜惠庆', '丁丑 癸卯 乙巳 丙子', '身强'],
-  ];
-  for (const [name, pillars, verdict] of HELD) {
-    it(`${name} ${pillars} -> ${verdict}`, async () => {
-      expect((await scoreOf(pillars)).verdict).toBe(verdict);
-    });
-  }
-
-  it('兰英史 is not 身弱 — the book says 身主不弱, which the band must respect', async () => {
-    expect((await scoreOf('辛丑 乙未 己亥 壬申')).verdict).not.toBe('身弱');
-  });
-
-  it.skip('阮玲玉 庚戌 辛巳 己亥 乙亥 -> 身弱 (KNOWN MISS: 巳亥冲 not modelled)', async () => {
-    // The book's stated cause is 印绶冲散 -- the clash scatters the seals.
-    // v1 does not model 冲 at all, so this case is expected to fail and is
-    // recorded rather than hidden. Upgrade path: clash damping.
-    expect((await scoreOf('庚戌 辛巳 己亥 乙亥')).verdict).toBe('身弱');
-  });
-});
-
-describe('strengthAssessment — honesty of the verdict itself', () => {
-  it('a borderline chart says so rather than committing', async () => {
-    const r = await scoreOf('壬子 丙午 癸亥 戊午');   // 陈姓, -1.22, just past the line
-    expect(r.margin).toBe('临界');
-  });
-
-  it('a decisive chart carries no borderline flag', async () => {
-    expect((await scoreOf('癸酉 庚申 壬子 辛亥')).margin).toBeNull();   // 交禄格 +9.80
-  });
-
-  it('中和 reports which way it leans instead of pretending to be exactly balanced', async () => {
-    const r = await scoreOf('乙巳 戊子 乙巳 戊寅');   // 孙君 +0.20
-    expect(r.verdict).toBe('中和');
-    expect(r.lean).toBe('偏强');
-  });
-
-  it('names its method and admits the weights are this project\'s', async () => {
-    const r = await scoreOf('癸酉 丁巳 辛丑 癸巳');
-    expect(r.method).toMatch(/千里命稿/);
-    expect(r.method).toMatch(/校准|拟合/);   // must not read as if the book supplied numbers
-  });
-});
 
 describe('strengthFactors — root labels follow hidden stems, not the stage table', () => {
   // Pillars, not a birth moment. The chart these assertions exercise belongs to
@@ -205,23 +99,6 @@ describe('the tables that back all of this are locked, not just believed', () =>
     expect(verifyTwelveStageAnchors()).toBe(true);
   });
 
-  it('the combination tables in strength.ts match the ones in interactions.ts', async () => {
-    // strength.ts carries a third copy of 三合/三会/半合, after interactions.ts
-    // and calibrate.py. This project has already been bitten by hand-synced
-    // duplicates (three copies of geo/resolver.ts, one of which kept a rule the
-    // other two had deleted).
-    const strength = await import('../src/core/strength');
-    const inter = await import('../src/core/interactions');
-    const norm = (rows: { branches: string[]; element?: string }[]) =>
-      rows.map((r) => `${[...r.branches].sort().join('')}:${r.element ?? ''}`).sort();
-    for (const key of ['TRINES', 'DIRECTIONALS'] as const) {
-      const a = (strength as Record<string, unknown>)[key];
-      const b = (inter as Record<string, unknown>)[key];
-      if (!a || !b) continue;   // only compare what both actually export
-      expect(norm(a as never)).toEqual(norm(b as never));
-    }
-  });
-
   it('the hidden-stem table is the engine\'s, not a private copy', async () => {
     const { BRANCH_HIDDEN_STEMS } = await import('@openfate/bazi-engine');
     const { orderHiddenStems } = await import('../src/core/hidden-stems');
@@ -236,15 +113,14 @@ describe('the tables that back all of this are locked, not just believed', () =>
   });
 });
 
-describe('an unknown birth hour yields no strength verdict at all', () => {
-  it('both layers are absent, not computed off a fabricated hour', () => {
+describe('an unknown birth hour yields no factor ledger either', () => {
+  it('the ledger is absent, not computed off a fabricated hour', () => {
     // The whole reason timeUnknown stopped substituting noon. A strength score
     // is more hour-sensitive than the pillars it is derived from.
     const r = calculateDualAxisBazi({
       solarDate: { year: 2024, month: 2, day: 4 }, place: 'Beijing',
       gender: 'male', timeUnknown: true,
     } as never) as never as Record<string, unknown>;
-    expect('strengthAssessment' in r).toBe(false);
     expect('strengthFactors' in r).toBe(false);
   });
 
@@ -253,6 +129,35 @@ describe('an unknown birth hour yields no strength verdict at all', () => {
       solarDate: { year: 2024, month: 2, day: 4 }, clockTime: { hour: 8, minute: 0 },
       place: 'Beijing', gender: 'male',
     } as never) as never as Record<string, unknown>;
-    expect('strengthAssessment' in r).toBe(true);
+    expect('strengthFactors' in r).toBe(true);
+  });
+});
+
+describe('the server stops at the facts', () => {
+  it('emits no strength verdict, score or 喜用神 — those are inference', () => {
+    // The moat is being right about what can be computed. A weighing that
+    // depends on numbers this project invented is not a computation, however
+    // carefully it is labelled; the calling LLM does that part, and can bring
+    // a 命理 knowledge base to it.
+    const r = calculateDualAxisBazi({
+      solarDate: { year: 1993, month: 5, day: 20 }, clockTime: { hour: 9, minute: 40 },
+      place: 'Tianjin', gender: 'female',
+    } as never) as never as Record<string, unknown>;
+    expect('strengthAssessment' in r).toBe(false);
+    const json = JSON.stringify(r);
+    for (const word of ['身强', '身弱', '中和', '喜用', '用神', '忌神']) {
+      expect(json).not.toContain(word);
+    }
+  });
+
+  it('but still hands over every fact the weighing needs', () => {
+    const r = calculateDualAxisBazi({
+      solarDate: { year: 1993, month: 5, day: 20 }, clockTime: { hour: 9, minute: 40 },
+      place: 'Tianjin', gender: 'female',
+    } as never) as never as { strengthFactors: Record<string, unknown> };
+    const f = r.strengthFactors;
+    for (const key of ['monthOrder', 'roots', 'stemSupport', 'counts', 'tableNote']) {
+      expect(f[key]).toBeDefined();
+    }
   });
 });

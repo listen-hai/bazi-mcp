@@ -198,19 +198,6 @@ export interface StrengthFactorsOutput {
   tableNote: string;
 }
 
-export interface StrengthAssessmentOutput {
-  score: number;
-  /** Literal union, not `string`: the three verdicts are the whole API surface
-   * of this field, and a consumer branching on them should get an exhaustive
-   * check rather than a stringly-typed guess. */
-  verdict: '身强' | '身弱' | '中和';
-  /** '临界' when the score sits within 0.5 of the threshold -- present both
-   * readings to the user rather than the verdict alone. */
-  margin: '临界' | null;
-  /** Which way a 中和 chart leans. Null for a decisive verdict. */
-  lean: '偏强' | '偏弱' | null;
-  method: string;
-}
 
 export interface BaziCalculationResult {
   fourPillars: string;
@@ -233,7 +220,6 @@ export interface BaziCalculationResult {
   // (`timeUnknown: true`) must not silently score strength from a fabricated
   // hour, so both fields are simply absent rather than computed from a guess.
   strengthFactors?: StrengthFactorsOutput;
-  strengthAssessment?: StrengthAssessmentOutput;
 }
 
 export interface CityEntry {

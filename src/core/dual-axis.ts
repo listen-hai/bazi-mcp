@@ -32,7 +32,6 @@ import {
 import { resolveLocation } from '../geo/resolver';
 import { getShichenMidpoint, getShichenSamplePoints } from './shichen';
 import { orderHiddenStems } from './hidden-stems';
-import { assessStrength } from './strength';
 import { computeStrengthFactors } from './strength-factors';
 
 /**
@@ -545,11 +544,12 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
     ? `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`
     : `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} ${hourPillar!.ganZhi}`;
 
-  // Strength (旺衰) needs all four pillars, so an unknown birth hour must not
-  // fabricate one for it -- these two fields are simply omitted rather than
-  // scored from a guessed hour (hourPillar is null exactly when timeUnknown).
+  // The factor ledger needs all four pillars, so an unknown birth hour omits it
+  // rather than deriving it from a guessed one (hourPillar is null exactly when
+  // timeUnknown). There is no verdict field: weighing these factors into
+  // 身强/身弱 depends on numbers no source supplies, so it is the caller's
+  // inference to make, not this server's -- see docs/spec.md.
   let strengthFactors: BaziCalculationResult['strengthFactors'];
-  let strengthAssessment: BaziCalculationResult['strengthAssessment'];
   if (hourPillar) {
     const fourGanZhi = {
       year: yearPillar.ganZhi,
@@ -558,7 +558,6 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
       hour: hourPillar.ganZhi,
     };
     strengthFactors = computeStrengthFactors(fourGanZhi);
-    strengthAssessment = assessStrength(fourGanZhi);
   }
 
   // 9. Format Da Yun (strictly from Axis A) with nominal age
@@ -664,7 +663,6 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
     // placeholder. JSON.stringify happens to drop undefined, so the wire
     // format was already right; a consumer holding the object was not.
     ...(strengthFactors ? { strengthFactors } : {}),
-    ...(strengthAssessment ? { strengthAssessment } : {}),
   };
 }
 

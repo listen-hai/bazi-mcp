@@ -39,32 +39,22 @@ Birth Wall Clock Time + IANA Timezone (e.g. 1990-06-15 20:00 America/Los_Angeles
 ---
 
 
-## 🔮 Day-master strength (旺衰)
+## 🔮 What this server will not tell you
 
-Two layers, because a verdict alone is not enough and a verdict is not optional.
+**It calculates; it does not infer.** 身强/身弱, 喜用神 and 格局 are weighings, and no
+source supplies the weights they need — every published figure either contradicts
+the next or comes from closed software. A scored verdict here would rest on
+numbers invented in this repository, however carefully the method were named.
+v3.1.0 shipped one; v4.0.0 removed it.
 
-**`strengthFactors` — a zero-weight ledger.** Month-order relation and 旺相休囚死,
-per-branch roots with their qi level and any 禄/刃/长生/墓库根 tag, stem support
-direction, helper/drain counts. Pure table lookup: no weights, no thresholds, no
-verdict words. It is observation, and a caller who prefers their own school's
-weighting can do it from here.
+What you get instead is `strengthFactors`, a zero-weight ledger: 月令 relation and
+旺相休囚死, per-branch roots with their qi level and any 禄/刃/长生/墓库根 tag,
+stem-support direction, and a helper/drain tally whose denominator is documented.
+Every entry is a table lookup. Weigh them with your own school's rules, or with a
+命理 knowledge base — the facts are all here, and they are the part that can be
+got right.
 
-**`strengthAssessment` — a named-method reference verdict.** Score, verdict,
-`margin: '临界'` when it sits within 0.5 of the threshold, and which way a 中和
-chart leans.
-
-The qualitative rules and all 20 calibration cases come from 韦千里《千里命稿·
-評斷篇》(1935, public domain). **The numbers do not.** No verifiable consensus
-weight table exists — 问真八字 and 文墨天机 are closed source, and the figures
-circulating online contradict each other. Every weight here is fitted by this
-project and labelled as such in `method`. The calibration is in
-`scripts/strength-calibration/`: `python3 calibrate.py` prints `172/10368`, and
-the 9-chart held-out set was scored with the parameters locked, never fed back.
-One case (阮玲玉) fails for a reason traceable to the book's own words —
-«印绶冲散», and 冲 is not modelled in v1. It is recorded, not hidden.
-
-Absent entirely when the birth hour is unknown: a strength score is more
-hour-sensitive than the pillars it derives from.
+Absent entirely when the birth hour is unknown.
 
 ## 🚀 Quickstart: Run via NPM
 

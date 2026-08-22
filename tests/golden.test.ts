@@ -202,7 +202,7 @@ describe('8.1b Full-output shape snapshot', () => {
     expect(Object.keys(res).sort()).toEqual(
       [
         'daYun', 'dayMaster', 'diagnostics', 'fourPillars', 'interactions', 'pillars',
-        'strengthAssessment', 'strengthFactors',
+        'strengthFactors',
       ].sort()
     );
 
