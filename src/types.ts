@@ -114,6 +114,17 @@ export interface DiagnosticsOutput {
   };
   historicalTzApprox?: boolean;
   locationSource?: 'resolved' | 'caller_supplied' | 'mixed';
+  /**
+   * Present only when `timeUnknown: true` and a pillar isn't determined by
+   * the date alone (typically a solar term, e.g. 立春, falling within the
+   * day). Each entry holds the two candidate `ganZhi` values, one per end of
+   * the local day. Absent when every pillar agrees across the whole day.
+   */
+  pillarCandidates?: {
+    year?: [string, string];
+    month?: [string, string];
+    day?: [string, string];
+  };
   warnings: string[];
   engineInfo: {
     baziEngine: string;

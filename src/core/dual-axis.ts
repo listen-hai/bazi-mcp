@@ -87,9 +87,15 @@ function formatPillar(
 }
 
 /**
- * The core dual-axis calculation engine.
+ * The core dual-axis calculation engine for one concrete clock time.
+ *
+ * `timeOverride` lets the `timeUnknown` wrapper below sample both ends of the
+ * local day (00:00 and 22:59) without fabricating a time of its own: when
+ * present it wins over `input.clockTime`/`input.shichen`, while
+ * `isUnknownTime` (derived from `input.timeUnknown`) still nulls the hour
+ * pillar exactly as before.
  */
-export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
+function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: number }): BaziCalculationResult {
   const warnings: string[] = [];
 
   // 1. Resolve Location & IANA Timezone
@@ -115,11 +121,14 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
   let lunarDiag: DiagnosticsOutput['lunar'] = undefined;
 
   // Determine clock time (hour, minute)
-  let baseHour = 12;
-  let baseMinute = 0;
-  let isUnknownTime = Boolean(input.timeUnknown);
+  let baseHour: number;
+  let baseMinute: number;
+  const isUnknownTime = Boolean(input.timeUnknown);
 
-  if (input.clockTime) {
+  if (timeOverride) {
+    baseHour = timeOverride.hour;
+    baseMinute = timeOverride.minute;
+  } else if (input.clockTime) {
     baseHour = input.clockTime.hour;
     baseMinute = input.clockTime.minute ?? 0;
   } else if (input.shichen) {
@@ -127,8 +136,11 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     baseHour = mid.hour;
     baseMinute = mid.minute;
   } else if (input.timeUnknown) {
-    baseHour = 12;
-    baseMinute = 0;
+    // The `calculateDualAxisBazi` wrapper always supplies a `timeOverride`
+    // when `timeUnknown` is set (it samples both ends of the day itself), so
+    // this branch is unreachable in practice; it only exists so this
+    // function stays safely callable on its own.
+    throw new Error('Internal: timeUnknown requires a timeOverride sample point.');
   } else {
     // If no time is given and timeUnknown not explicitly set, throw error
     throw new Error('Missing time information: please provide `clockTime` (clock time), `shichen` (traditional double-hour), or set `timeUnknown: true` (3-pillar chart).');
@@ -631,4 +643,111 @@ export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
     interactions,
     diagnostics,
   };
+}
+
+/**
+ * An ambiguous pillar reported as both candidates joined together (e.g.
+ * `"癸卯/甲辰"`), never as a single value picked out of the unknown range.
+ * `diagnostics.pillarCandidates` carries the same two values in structured
+ * form for callers who want to branch on them.
+ */
+function ambiguousPillar(a: PillarOutput, b: PillarOutput): PillarOutput {
+  return {
+    stem: '?',
+    branch: '?',
+    ganZhi: `${a.ganZhi}/${b.ganZhi}`,
+    element: '?',
+    hiddenStems: [],
+  };
+}
+
+/**
+ * `timeUnknown: true` must not fabricate an hour and let it silently drive
+ * the year/month/day pillars and Da Yun (the bug this fixes: the old code
+ * substituted noon and carried on). Instead this samples both ends of the
+ * local day -- 00:00 and 22:59 -- and compares the results:
+ *
+ *   - if a pillar agrees at both ends, the date alone determines it: report
+ *     it plainly, no warning, no candidate (degradation stays proportionate).
+ *   - if it disagrees (typically because a solar term, e.g. 立春, falls
+ *     within the day), report both candidates in
+ *     `diagnostics.pillarCandidates` and warn, rather than silently picking
+ *     the noon-side (or any other) value.
+ *
+ * The sampling deliberately stops at 22:59 rather than 23:59: under sect=2
+ * (the default), 23:00-23:59 is 早子时 and always belongs to the next
+ * calendar day by definition (see the "Late Zi hour" warning above for
+ * sect=1) -- every single day, solar term or not. That is an already-known,
+ * already-documented rule, not the kind of silent, hour-dependent guess this
+ * fix targets, so it is intentionally out of scope here.
+ *
+ * Da Yun's start date is far more hour-sensitive than the pillars (it
+ * tracks fractional days to the nearest solar term boundary), so it is
+ * always reported as a date range rather than a to-the-second timestamp,
+ * even on days where every pillar happens to agree.
+ */
+function calculateUnknownTimeBazi(input: BaziInput): BaziCalculationResult {
+  const start = computeAxes(input, { hour: 0, minute: 0 });
+  const end = computeAxes(input, { hour: 22, minute: 59 });
+
+  const warnings = [...start.diagnostics.warnings];
+  const pillarCandidates: NonNullable<DiagnosticsOutput['pillarCandidates']> = {};
+
+  const mergePillar = (key: 'year' | 'month' | 'day', label: string): PillarOutput => {
+    const a = start.pillars[key]!;
+    const b = end.pillars[key]!;
+    if (a.ganZhi === b.ganZhi) return a;
+    pillarCandidates[key] = [a.ganZhi, b.ganZhi];
+    warnings.push(
+      `Birth time is unknown and a solar term (e.g. 立春) falls within this day, so the ${label} is not determined by the date alone; see diagnostics.pillarCandidates.${key} for the candidates.`
+    );
+    return ambiguousPillar(a, b);
+  };
+
+  const yearPillar = mergePillar('year', 'year pillar');
+  const monthPillar = mergePillar('month', 'month pillar');
+  const dayPillar = mergePillar('day', 'day pillar');
+
+  const fourPillars = `${yearPillar.ganZhi} ${monthPillar.ganZhi} ${dayPillar.ganZhi} [hour unknown]`;
+
+  const startDay = start.daYun.startDate.slice(0, 10);
+  const endDay = end.daYun.startDate.slice(0, 10);
+  const daYunStartDate = startDay === endDay
+    ? `${startDay} (Asia/Shanghai, hour unknown)`
+    : `${startDay} to ${endDay} (Asia/Shanghai, hour unknown -- Da Yun start depends on birth hour)`;
+  if (startDay !== endDay || start.daYun.isForward !== end.daYun.isForward) {
+    warnings.push(
+      `Da Yun (大运) start date${start.daYun.isForward !== end.daYun.isForward ? ' and direction' : ''} cannot be pinned down without a known birth hour; see daYun.startDate for the range.`
+    );
+  }
+
+  return {
+    ...start,
+    fourPillars,
+    pillars: {
+      year: yearPillar,
+      month: monthPillar,
+      day: dayPillar,
+      hour: null,
+    },
+    daYun: {
+      ...start.daYun,
+      startDate: daYunStartDate,
+    },
+    diagnostics: {
+      ...start.diagnostics,
+      warnings,
+      pillarCandidates: Object.keys(pillarCandidates).length > 0 ? pillarCandidates : undefined,
+    },
+  };
+}
+
+/**
+ * The core dual-axis calculation engine.
+ */
+export function calculateDualAxisBazi(input: BaziInput): BaziCalculationResult {
+  if (input.timeUnknown) {
+    return calculateUnknownTimeBazi(input);
+  }
+  return computeAxes(input);
 }
