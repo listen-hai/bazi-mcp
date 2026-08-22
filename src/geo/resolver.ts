@@ -145,6 +145,63 @@ export function lookupCityWithCount(query: string): { matched: number; results: 
   return { matched: all.length, results: all.slice(0, MAX_RESULTS) };
 }
 
+/** Candidate shape carried in a LocationError. Identifying fields only --
+ * deliberately no population: that is a ranking signal, and publishing it
+ * would move the guess this module refuses to make into the caller's prompt. */
+export interface LocationCandidate {
+  name: string;
+  province: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+}
+
+export type LocationErrorCode =
+  /** The name matched more than one real place. */
+  | 'ambiguous_place'
+  /** The name matched nothing in the city database. */
+  | 'unknown_place'
+  /** `place` was combined with a partial coordinate override. */
+  | 'incomplete_coordinates';
+
+/**
+ * A refusal the caller can act on programmatically.
+ *
+ * The prose `message` is still the primary channel for a human or an LLM
+ * reading the tool result, but an agent should not have to parse English to
+ * find the candidate list. `code` is stable enough to branch on; `candidates`
+ * is the list to ask the user about; `matched` is the TRUE number of hits, so
+ * a capped list never reads as an exhaustive one.
+ */
+export class LocationError extends Error {
+  readonly code: LocationErrorCode;
+  readonly candidates: LocationCandidate[];
+  readonly matched: number;
+
+  constructor(code: LocationErrorCode, message: string, candidates: LocationCandidate[] = [], matched = 0) {
+    super(message);
+    this.name = 'LocationError';
+    this.code = code;
+    this.candidates = candidates;
+    this.matched = matched;
+  }
+
+  /** The wire form the MCP layer serialises into an isError result. */
+  toPayload(): Record<string, unknown> {
+    return { code: this.code, message: this.message, matched: this.matched, candidates: this.candidates };
+  }
+}
+
+const toCandidate = (c: CityEntry): LocationCandidate => ({
+  name: c.name,
+  province: c.province ?? '',
+  country: c.country,
+  latitude: c.latitude,
+  longitude: c.longitude,
+  timezone: c.timezone,
+});
+
 export interface ResolvedLocation {
   longitude: number;
   timezone: string;
@@ -193,7 +250,8 @@ export function resolveLocation(input: {
 
   // 2. Place provided with longitude only (missing timezone) -> Reject partial override
   if (hasPlace && hasLon && !hasTz) {
-    throw new Error(
+    throw new LocationError(
+      'incomplete_coordinates',
       `Inconsistent location input: when overriding coordinates with \`longitude\` alongside \`place\` ("${input.place}"), \`timezone\` must also be explicitly provided.`
     );
   }
@@ -203,7 +261,8 @@ export function resolveLocation(input: {
     const { matched, results: candidates } = lookupCityWithCount(input.place!);
 
     if (candidates.length === 0) {
-      throw new Error(
+      throw new LocationError(
+        'unknown_place',
         `Could not recognize birth place "${input.place}". Please use an English city name (e.g. "Beijing", "New York", "Lagos"), or explicitly pass \`longitude\` and \`timezone\`.`
       );
     }
@@ -282,11 +341,14 @@ export function resolveLocation(input: {
             ` -> latitude: ${c.latitude}°, longitude: ${c.longitude}°, timezone: "${c.timezone}"`
         )
         .join('\n');
-      throw new Error(
+      throw new LocationError(
+        'ambiguous_place',
         `Place name "${input.place}" matched multiple candidate cities -- different places, ` +
         `not necessarily different timezones, but far enough apart to change the chart. ` +
         `Ask which one was meant, then retry as \`"${input.place}, <province or country>"\` ` +
-        `or with explicit \`longitude\` and \`timezone\`${truncationNote}:\n${listStr}`
+        `or with explicit \`longitude\` and \`timezone\`${truncationNote}:\n${listStr}`,
+        candidates.map(toCandidate),
+        matched
       );
     }
 
@@ -312,12 +374,14 @@ export function resolveLocation(input: {
 
   // 4. Incomplete longitude without timezone
   if (hasLon && !hasTz) {
-    throw new Error(
+    throw new LocationError(
+      'incomplete_coordinates',
       `Longitude (${input.longitude}) was provided but \`timezone\` (IANA timezone name) is missing. Rounding longitude to infer a timezone is strictly forbidden; please explicitly specify \`timezone\`.`
     );
   }
 
-  throw new Error(
+  throw new LocationError(
+    'incomplete_coordinates',
     'Missing birth location: please provide `place` (English city name, e.g. "Beijing", "New York", "Lagos"), or both `longitude` and `timezone`.'
   );
 }

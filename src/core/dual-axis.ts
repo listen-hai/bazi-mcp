@@ -504,8 +504,12 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
           if (sampleB.pillars.hour) {
             candidateHourPillars.add(sampleB.pillars.hour.ganZhi);
           }
-        } catch {
-          // Gap: this occurrence doesn't exist, skip it.
+        } catch (err) {
+          // Only a DST spring-forward gap is expected here -- that occurrence
+          // genuinely does not exist, so skipping it is correct. Anything else
+          // would silently drop a candidate and could flip `isAmbiguous` to
+          // false, hiding uncertainty we actually detected. Rethrow it.
+          if (!(err instanceof Error) || !/spring-forward gap/.test(err.message)) throw err;
         }
       }
     }
