@@ -91,3 +91,22 @@ describe('MCP input schema parity with the zod schema', () => {
     }
   });
 });
+
+describe('the tool description keeps up with the school parameters', () => {
+  it('names every *School input it advertises', async () => {
+    // 4.2.0 shipped a description still saying "Two of those tables sit on a
+    // live school dispute" after a third was added, and never mentioned the
+    // two new parameters in the prose at all -- only in the property list. An
+    // agent reads the description to decide what to pass, so a parameter the
+    // prose omits is a parameter that does not exist in practice.
+    const server = createBaziMcpServer() as any;
+    const handler = server._requestHandlers.get(ListToolsRequestSchema.shape.method.value);
+    const { tools } = await handler({ method: 'tools/list' }, {});
+    const tool = tools.find((t: any) => t.name === 'calculate_bazi');
+    const schoolParams = Object.keys(tool.inputSchema.properties).filter((p: string) => p.endsWith('School'));
+    expect(schoolParams.length).toBeGreaterThan(0);
+    for (const param of schoolParams) {
+      expect(tool.description as string, `${param} is accepted but the description never names it`).toContain(param);
+    }
+  });
+});
