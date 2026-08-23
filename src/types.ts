@@ -182,19 +182,23 @@ export interface StemSupportFactOutput {
   direction: string; // 帮 | 生 | 泄 | 耗 | 克
 }
 
+export interface ConventionChoiceOutput {
+  used: string;
+  source: string;
+  alternatives: string[];
+  affects: string[];
+}
+
 export interface StrengthFactorsOutput {
   monthOrder: MonthOrderFactOutput;
   roots: RootFactOutput[];
   stemSupport: StemSupportFactOutput[];
   /**
-   * Equal-weight tally over the seven non-day-master positions: the three
-   * stems by their own element, and all four branches by their MAIN QI only
-   * (middle and residual qi are not counted here -- read `roots` for those).
-   * `drains` merges 泄/耗/克 into one bucket. Both choices are simplifications,
-   * which is why the denominator is spelled out: a bare count whose basis the
-   * caller cannot recover is a weight in disguise.
+   * The school each table follows. Two of these are live disputes -- for a yin
+   * day master the twelve-stage fork changes every branch -- so the choice is
+   * stated rather than silently applied.
    */
-  counts: { helpers: number; drains: number };
+  conventions: Record<string, ConventionChoiceOutput>;
   tableNote: string;
 }
 

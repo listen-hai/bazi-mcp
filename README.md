@@ -49,10 +49,16 @@ v3.1.0 shipped one; v4.0.0 removed it.
 
 What you get instead is `strengthFactors`, a zero-weight ledger: 月令 relation and
 旺相休囚死, per-branch roots with their qi level and any 禄/刃/长生/墓库根 tag,
-stem-support direction, and a helper/drain tally whose denominator is documented.
+and stem-support direction.
 Every entry is a table lookup. Weigh them with your own school's rules, or with a
 命理 knowledge base — the facts are all here, and they are the part that can be
 got right.
+
+Two of those tables sit on a live school dispute, so `strengthFactors.conventions`
+names the one used, the ones not used, and the output fields that would change.
+For a yin day master the 十二长生 fork moves every branch: 辛 in 巳 is 死 under the
+渊海子平 convention used here, 长生 under 滴天髓's 阴阳同生同死. Picking one and
+staying quiet about it would pass off one school's answer as the answer.
 
 Absent entirely when the birth hour is unknown.
 

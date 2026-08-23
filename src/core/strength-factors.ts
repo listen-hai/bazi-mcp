@@ -165,11 +165,53 @@ export interface StemSupportFact {
   direction: Direction;
 }
 
+/**
+ * Every school fork these tables sit on. The tables themselves are lookups --
+ * given a fork, any correct implementation returns the same value -- but two
+ * of the forks below are live disputes, so leaving the choice unstated would
+ * present one school's answer as the answer. For a yin day master the twelve
+ * stage fork alone moves every branch: 辛 in 巳 is 死 under the convention
+ * used here and 长生 under the other one.
+ *
+ * These are declared inputs, not judgments: no weight is attached to either
+ * side and this file does not decide which school is right.
+ */
+export interface ConventionChoice {
+  used: string;
+  source: string;
+  /** Named schools this does NOT follow. */
+  alternatives: string[];
+  /** Fields whose value changes if the caller assumes an alternative. */
+  affects: string[];
+}
+
+export const STRENGTH_FACTOR_CONVENTIONS: Record<string, ConventionChoice> = {
+  twelveStage: {
+    used: '阳干顺行、阴干逆行',
+    source: '渊海子平·论天干生旺死绝',
+    alternatives: ['阴阳同生同死（滴天髓·任铁樵注，阴干随其阳干顺行）'],
+    affects: ['monthOrder.twelveStage', 'roots[].tags'],
+  },
+  wangXiangXiuQiuSi: {
+    used: '以月支本气为令',
+    source: '五行旺相休囚死通行口径',
+    alternatives: ['土旺四季十八日（辰戌丑未月末十八日改以土为令）'],
+    affects: ['monthOrder.wangXiangXiuQiuSi'],
+  },
+  bladeTag: {
+    used: '仅阳干标刃（帝旺位）',
+    alternatives: ['阴刃：乙卯 丁午 己午 辛酉 癸子 亦标刃'],
+    source: '通行阳刃说',
+    affects: ['roots[].tags'],
+  },
+};
+
 export interface StrengthFactors {
   monthOrder: MonthOrderFact;
   roots: RootFact[];
   stemSupport: StemSupportFact[];
-  counts: { helpers: number; drains: number };
+  /** Which school each table above follows -- see STRENGTH_FACTOR_CONVENTIONS. */
+  conventions: Record<string, ConventionChoice>;
   tableNote: string;
 }
 
@@ -215,22 +257,18 @@ export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFact
     return { pillar, stem, tenGod: calculateTenGod(dayStem, stem), direction: DIRECTION_OF_RELATION[relation] };
   });
 
-  let helpers = 0;
-  let drains = 0;
-  for (const { stem } of stemSupport) {
-    const rel = relationOf(dme, STEM_TO_ELEMENT[stem]);
-    if (rel === '同我' || rel === '生我') helpers++; else drains++;
-  }
-  for (const [, branch] of pillarBranches) {
-    const rel = relationOf(dme, STEM_TO_ELEMENT[getMainQi(branch)]);
-    if (rel === '同我' || rel === '生我') helpers++; else drains++;
-  }
+  // No helper/drain tally here. It looked like a fact but carried three
+  // decisions the caller could not recover from the number: seven positions
+  // weighted equally, branches counted by main qi alone while `roots` reports
+  // middle and residual qi a few lines above, and 泄/耗/克 collapsed into one
+  // bucket. It was derivable from roots + stemSupport anyway, so the tally's
+  // only contribution was the weighing -- which is the caller's to do.
 
   return {
     monthOrder,
     roots,
     stemSupport,
-    counts: { helpers, drains },
+    conventions: STRENGTH_FACTOR_CONVENTIONS,
     tableNote:
       'Hidden-stem proportions follow @openfate/bazi-engine\'s BRANCH_HIDDEN_STEMS table ' +
       '(mainstream 本气/中气/余气 apportionment, Si 巳 reordered to 丙庚戊 -- see hidden-stems.ts); ' +

@@ -156,8 +156,77 @@ describe('the server stops at the facts', () => {
       place: 'Tianjin', gender: 'female',
     } as never) as never as { strengthFactors: Record<string, unknown> };
     const f = r.strengthFactors;
-    for (const key of ['monthOrder', 'roots', 'stemSupport', 'counts', 'tableNote']) {
+    for (const key of ['monthOrder', 'roots', 'stemSupport', 'tableNote']) {
       expect(f[key]).toBeDefined();
+    }
+  });
+});
+
+describe('the ledger reports facts, never a pre-weighing of them', () => {
+  it('no helper/drain tally — equal weighting is itself a weighing', () => {
+    // `counts: { helpers, drains }` looked like a fact but carried three
+    // decisions nobody could recover from it: seven positions weighted
+    // equally, branches counted by main qi only (while `roots` reports middle
+    // and residual qi right there), and 泄/耗/克 merged into one bucket. It was
+    // also fully derivable from roots + stemSupport, so its only contribution
+    // was the weighing -- the exact thing this server leaves to the caller.
+    const f = computeStrengthFactors({
+      year: '癸酉', month: '丁巳', day: '辛丑', hour: '癸巳',
+    } as never) as never as Record<string, unknown>;
+    expect('counts' in f).toBe(false);
+  });
+
+  it('everything it does report is recoverable from a table', () => {
+    const f = computeStrengthFactors({
+      year: '癸酉', month: '丁巳', day: '辛丑', hour: '癸巳',
+    } as never) as never as {
+      roots: { rootLevel: string }[];
+      stemSupport: { direction: string }[];
+    };
+    // Each branch's own qi level, each stem's own direction -- the caller can
+    // weigh these however their school does.
+    expect(f.roots).toHaveLength(4);
+    expect(f.stemSupport).toHaveLength(3);
+    for (const r of f.roots) expect(['本气', '中气', '余气', '无']).toContain(r.rootLevel);
+    for (const s of f.stemSupport) expect(['帮', '生', '泄', '耗', '克']).toContain(s.direction);
+  });
+});
+
+describe('school forks are declared, not silently applied', () => {
+  const factors = computeStrengthFactors({
+    year: '癸酉', month: '丁巳', day: '辛丑', hour: '癸巳',
+  } as never) as never as Record<string, never>;
+
+  it('names a school for every table that has a live dispute', () => {
+    // 十二长生 and 旺相休囚死 both have a second school in print. Yin day
+    // masters take the twelve-stage fork on EVERY branch -- 辛 in 巳 is 死
+    // here and 长生 under 同生同死 -- so an undeclared choice would hand a
+    // caller one school's answer as if it were the only one.
+    const c = factors.conventions as Record<string, { used: string; alternatives: string[] }>;
+    for (const key of ['twelveStage', 'wangXiangXiuQiuSi', 'bladeTag']) {
+      expect(c[key]).toBeDefined();
+      expect(c[key].used.length).toBeGreaterThan(0);
+      expect(c[key].alternatives.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every field a fork claims to affect actually exists', () => {
+    // Without this, renaming an output field leaves the disclosure pointing at
+    // nothing and the fork goes quiet again -- the exact failure the block was
+    // added to prevent.
+    const c = factors.conventions as Record<string, { affects: string[] }>;
+    for (const choice of Object.values(c)) {
+      for (const path of choice.affects) {
+        const value = path.split('.').reduce<unknown>((node, key) => {
+          if (key.endsWith('[]')) {
+            const list = (node as Record<string, unknown[]>)[key.slice(0, -2)];
+            expect(Array.isArray(list)).toBe(true);
+            return list[0];
+          }
+          return (node as Record<string, unknown>)[key];
+        }, factors);
+        expect(value, `${path} named in affects but missing from output`).toBeDefined();
+      }
     }
   });
 });
