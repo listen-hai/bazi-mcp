@@ -146,6 +146,16 @@ export function createBaziMcpServer(): Server {
             enum: ['yang_forward_yin_backward', 'yin_follows_yang'],
             description: 'School for 十二长生 (default: "yang_forward_yin_backward"). "yang_forward_yin_backward" = 渊海子平: yang stems run the cycle forward from their 长生 anchor, yin stems run backward. "yin_follows_yang" = 滴天髓·任铁樵注 阴阳同生同死: a yin stem runs FORWARD from its yang partner\'s anchor. Yin day masters only — yang day masters are identical under both, so pass this only when the user follows a specific school. Affects strengthFactors.monthOrder.twelveStage and the 长生 tag in strengthFactors.roots; 禄 and 刃 are read from the 十干禄/阳刃 tables and do not move with it. Whichever school is in force is echoed back in strengthFactors.conventions.twelveStage.',
           },
+          monthOrderSchool: {
+            type: 'string',
+            enum: ['branch_main_qi', 'earth_rules_final_18_days'],
+            description: 'School for 月令 / 旺相休囚死 (default: "branch_main_qi"). "branch_main_qi" takes the month branch\'s main qi as 令, so 辰戌丑未 count as 土 for the whole month. "earth_rules_final_18_days" is 土旺四季十八日: in 辰戌丑未 months the final 18 days before the next 立 are 土, and the days before them keep the closing season\'s element (辰木 未火 戌金 丑水). Only those four months can differ — the other eight are identical under both, because their main qi already IS the season\'s element. Moves strengthFactors.monthOrder.wangXiangXiuQiuSi and .rulingElement only; .relation/.mainQiStem/.tenGod are month-branch facts and do not move. If the birth lands within hours of the 18-day line, diagnostics.warnings says so — do not repeat 旺相休囚死 as settled in that case.',
+          },
+          bladeSchool: {
+            type: 'string',
+            enum: ['yang_only', 'yin_at_diwang', 'yin_at_guandai'],
+            description: 'Which stems get a 刃 tag (default: "yang_only" = 阳刃 甲卯 丙午 戊午 庚酉 壬子 alone). 阴刃 has three irreconcilable readings in print and this server picks none of them: pass "yin_at_diwang" for 乙寅 丁巳 己巳 辛申 癸亥 (阴干帝旺为刃), "yin_at_guandai" for 乙辰 丁未 己未 辛戌 癸丑 (禄前一位/冠带为刃). The third school holds that yin stems have no 刃, which is what the default reports. Pass this only when the user follows a specific school — do not choose one for them.',
+          },
           trueSolar: {
             type: 'boolean',
             description: 'Deprecated, use `solarTime` instead (true -> "true", false -> "off"). Whether to apply True Solar Time correction (default: true).',

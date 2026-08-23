@@ -54,8 +54,26 @@ Every entry is a table lookup. Weigh them with your own school's rules, or with 
 命理 knowledge base — the facts are all here, and they are the part that can be
 got right.
 
-Two of those tables sit on a live school dispute, so `strengthFactors.conventions`
-names the one used, the ones not used, and the output fields that would change.
+Every table that sits on a school dispute is a named input, and
+`strengthFactors.conventions` echoes back the one in force, the ones not used,
+and the output fields that would change:
+
+| parameter | default | alternatives |
+|---|---|---|
+| `twelveStageSchool` | 阳顺阴逆 (渊海子平) | `yin_follows_yang` — 阴阳同生同死 (滴天髓) |
+| `monthOrderSchool` | 月支本气为令 | `earth_rules_final_18_days` — 土旺四季十八日 |
+| `bladeSchool` | 阳刃 only | `yin_at_diwang`, `yin_at_guandai` |
+
+`monthOrderSchool: "earth_rules_final_18_days"` gives 土 the final 18 days before
+the next 立 and leaves the days before them with the closing season (辰木 未火
+戌金 丑水). Only 辰戌丑未 months can move; the other eight have the season's
+element as their main qi already. The distance it turns on ships with the
+result as `monthOrder.daysToNextJie`, and the element it resolved to as
+`monthOrder.rulingElement`, so the verdict is reproducible from the output.
+
+阴刃 gets no default. Three readings are in print — 帝旺 (乙寅 丁巳 己巳 辛申
+癸亥), 冠带/禄前一位 (乙辰 丁未 己未 辛戌 癸丑), and no 阴刃 at all — and nothing
+here breaks the tie, so the caller names one or gets 阳刃 alone.
 For a yin day master the 十二长生 fork moves every branch: 辛 in 巳 is 死 under the
 default 渊海子平 convention, 长生 under 滴天髓's 阴阳同生同死. Pass
 `twelveStageSchool: "yin_follows_yang"` to take the second one; the school in force

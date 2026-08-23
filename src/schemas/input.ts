@@ -52,6 +52,12 @@ export const BaziInputSchema = z.object({
   twelveStageSchool: z.enum(['yang_forward_yin_backward', 'yin_follows_yang']).optional().describe(
     'School for 十二长生 (default "yang_forward_yin_backward"): "yang_forward_yin_backward" is 渊海子平\'s 阳干顺行、阴干逆行; "yin_follows_yang" is 滴天髓·任铁樵注\'s 阴阳同生同死, where a yin stem runs forward from its yang partner\'s 长生. Yin day masters only -- yang day masters are identical under both. Affects strengthFactors.monthOrder.twelveStage and the 长生 tag in strengthFactors.roots; 禄 and 刃 come from 十干禄/阳刃 tables and do not move. The school in force is echoed back in strengthFactors.conventions.twelveStage.'
   ),
+  monthOrderSchool: z.enum(['branch_main_qi', 'earth_rules_final_18_days']).optional().describe(
+    'School for 月令 / 旺相休囚死 (default "branch_main_qi"): "branch_main_qi" takes the month branch\'s main qi as 令, so 辰戌丑未 are 土 for the whole month. "earth_rules_final_18_days" is 土旺四季十八日 — in 辰戌丑未 months the final 18 days before the next 立 are 土 and the days before them keep the closing season\'s element (辰木 未火 戌金 丑水). Only those four months can differ; the other eight are identical under both. Moves strengthFactors.monthOrder.wangXiangXiuQiuSi and .rulingElement only — .relation/.mainQiStem/.tenGod are month-branch facts and do not move.'
+  ),
+  bladeSchool: z.enum(['yang_only', 'yin_at_diwang', 'yin_at_guandai']).optional().describe(
+    'Which stems get a 刃 tag (default "yang_only"): 阳刃 甲卯 丙午 戊午 庚酉 壬子 alone. 阴刃 has three irreconcilable readings in print and this server picks none of them — name one to get it: "yin_at_diwang" adds 乙寅 丁巳 己巳 辛申 癸亥 (阴干帝旺为刃), "yin_at_guandai" adds 乙辰 丁未 己未 辛戌 癸丑 (禄前一位/冠带为刃). A third school holds yin stems have no 刃 at all, which is what the default reports.'
+  ),
   /** @deprecated Use `solarTime` instead (true -> "true", false -> "off"). */
   trueSolar: z.boolean().optional().describe('Deprecated: use `solarTime` instead. Whether to apply True Solar Time correction (default true).'),
 }).strict().refine(

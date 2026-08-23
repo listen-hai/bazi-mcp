@@ -1,3 +1,4 @@
+import { Solar } from 'lunar-javascript';
 import { WallDateTime } from '../types';
 
 const dtfCache = new Map<string, Intl.DateTimeFormat>();
@@ -220,3 +221,25 @@ export function formatOffsetString(offsetMinutes: number, isDst: boolean): strin
   return isDst ? `${base} (DST in effect)` : base;
 }
 
+
+/**
+ * Days from a birth instant to the next 节, measured in the fixed UTC+8 frame.
+ *
+ * The frame is not a detail. lunar-javascript reports 节 instants in the
+ * Chinese almanac's fixed UTC+8, blind to the DST China ran 1986-1991, and the
+ * month pillar is derived from `instant + 8h` for exactly the same reason. Feed
+ * this the same number and both sides agree; feed it a civil wall clock and the
+ * 18-day boundary drifts an hour against the month it is supposed to divide.
+ *
+ * Returns a positive number of days (fractional). Only 节 count -- 中气 such as
+ * 春分 do not start a month and getNextJie skips them.
+ */
+export function daysToNextJie(frameMs: number): number {
+  const w = toUTCWall(frameMs);
+  const jie = Solar.fromYmdHms(w.year, w.month, w.day, w.hour, w.minute, w.second)
+    .getLunar()
+    .getNextJie()
+    .getSolar();
+  const jieMs = Date.UTC(jie.getYear(), jie.getMonth() - 1, jie.getDay(), jie.getHour(), jie.getMinute(), jie.getSecond());
+  return (jieMs - frameMs) / 86400000;
+}

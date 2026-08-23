@@ -150,6 +150,14 @@ export interface MonthOrderFactOutput {
   mainQiElement: string;
   tenGod: string;
   relation: string; // 同我 | 生我 | 我生 | 我克 | 克我
+  /** The element actually in command (令); what 旺相休囚死 is measured against.
+   * Equals mainQiElement under `branch_main_qi`; under 土旺四季十八日 it is 土
+   * inside the last 18 days of a 四季月 and the closing season's element before
+   * them. Reported so the verdict is reproducible from the output alone. */
+  rulingElement: string;
+  /** Days from the birth instant to the next 节, in the fixed UTC+8 frame the
+   * month pillar is derived in. The datum the 十八日 rule turns on. */
+  daysToNextJie?: number;
   wangXiangXiuQiuSi: string; // 旺 | 相 | 休 | 囚 | 死
   twelveStage: string;
 }

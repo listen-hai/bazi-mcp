@@ -26,6 +26,7 @@ import {
   wallToInstant,
   instantToWall,
   toUTCWall,
+  daysToNextJie,
   formatOffsetString,
   WallToInstantResult,
 } from './time';
@@ -557,7 +558,29 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
       day: dayPillar.ganZhi,
       hour: hourPillar.ganZhi,
     };
-    strengthFactors = computeStrengthFactors(fourGanZhi, input.twelveStageSchool);
+    // Measured in the fixed UTC+8 frame the month pillar itself is derived in
+    // -- see daysToNextJie. Computed unconditionally, not only when the
+    // variant asks for it: it is the datum 令 turns on, and a result whose
+    // input is withheld is not independently reproducible.
+    const jieDistance = daysToNextJie(instant + 8 * 3600000);
+    strengthFactors = computeStrengthFactors(fourGanZhi, input.twelveStageSchool, {
+      monthOrderSchool: input.monthOrderSchool,
+      bladeSchool: input.bladeSchool,
+      daysToNextJie: jieDistance,
+    });
+    // The 十八日 line is an instant; a shichen is a ~2h window. A birth given
+    // as a shichen can sit on either side of it, and the midpoint's verdict
+    // would pass as settled. 0.1 day over-covers the widest such window on
+    // purpose: this threshold decides whether to disclose, so it fails toward
+    // disclosing.
+    if (input.monthOrderSchool === 'earth_rules_final_18_days' && Math.abs(jieDistance - 18) < 0.1) {
+      warnings.push(
+        `Birth falls ${jieDistance.toFixed(2)} days before the next 节, within hours of the 十八日 ` +
+        `boundary 土旺四季十八日 turns on. 令 is reported as ${strengthFactors.monthOrder.rulingElement}; ` +
+        'a birth time off by a couple of hours lands on the other side. Unless the birth time is exact, ' +
+        'treat 旺相休囚死 as undetermined rather than repeating it as settled.',
+      );
+    }
   }
 
   // 9. Format Da Yun (strictly from Axis A) with nominal age
