@@ -49,6 +49,9 @@ export const BaziInputSchema = z.object({
   solarTime: z.enum(['true', 'mean', 'off']).optional().describe(
     'Solar time correction mode (default "true"): "true" applies both the longitude correction and the equation of time (full True Solar Time); "mean" applies only the longitude correction, no equation of time (地方平太阳时); "off" applies neither, using the wall clock as given.'
   ),
+  twelveStageSchool: z.enum(['yang_forward_yin_backward', 'yin_follows_yang']).optional().describe(
+    'School for 十二长生 (default "yang_forward_yin_backward"): "yang_forward_yin_backward" is 渊海子平\'s 阳干顺行、阴干逆行; "yin_follows_yang" is 滴天髓·任铁樵注\'s 阴阳同生同死, where a yin stem runs forward from its yang partner\'s 长生. Yin day masters only -- yang day masters are identical under both. Affects strengthFactors.monthOrder.twelveStage and the 长生 tag in strengthFactors.roots; 禄 and 刃 come from 十干禄/阳刃 tables and do not move. The school in force is echoed back in strengthFactors.conventions.twelveStage.'
+  ),
   /** @deprecated Use `solarTime` instead (true -> "true", false -> "off"). */
   trueSolar: z.boolean().optional().describe('Deprecated: use `solarTime` instead. Whether to apply True Solar Time correction (default true).'),
 }).strict().refine(

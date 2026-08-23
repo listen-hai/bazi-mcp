@@ -141,6 +141,11 @@ export function createBaziMcpServer(): Server {
             enum: ['true', 'mean', 'off'],
             description: 'Solar time correction mode (default: "true"). "true" = longitude correction + equation of time (full True Solar Time). "mean" = longitude correction only, no equation of time (地方平太阳时). "off" = neither; wall clock as given.',
           },
+          twelveStageSchool: {
+            type: 'string',
+            enum: ['yang_forward_yin_backward', 'yin_follows_yang'],
+            description: 'School for 十二长生 (default: "yang_forward_yin_backward"). "yang_forward_yin_backward" = 渊海子平: yang stems run the cycle forward from their 长生 anchor, yin stems run backward. "yin_follows_yang" = 滴天髓·任铁樵注 阴阳同生同死: a yin stem runs FORWARD from its yang partner\'s anchor. Yin day masters only — yang day masters are identical under both, so pass this only when the user follows a specific school. Affects strengthFactors.monthOrder.twelveStage and the 长生 tag in strengthFactors.roots; 禄 and 刃 are read from the 十干禄/阳刃 tables and do not move with it. Whichever school is in force is echoed back in strengthFactors.conventions.twelveStage.',
+          },
           trueSolar: {
             type: 'boolean',
             description: 'Deprecated, use `solarTime` instead (true -> "true", false -> "off"). Whether to apply True Solar Time correction (default: true).',

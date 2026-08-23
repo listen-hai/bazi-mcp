@@ -57,8 +57,11 @@ got right.
 Two of those tables sit on a live school dispute, so `strengthFactors.conventions`
 names the one used, the ones not used, and the output fields that would change.
 For a yin day master the 十二长生 fork moves every branch: 辛 in 巳 is 死 under the
-渊海子平 convention used here, 长生 under 滴天髓's 阴阳同生同死. Picking one and
-staying quiet about it would pass off one school's answer as the answer.
+default 渊海子平 convention, 长生 under 滴天髓's 阴阳同生同死. Pass
+`twelveStageSchool: "yin_follows_yang"` to take the second one; the school in force
+is echoed back in `conventions.twelveStage`. Yang day masters are identical under
+both. 禄 and 刃 are read from the 十干禄 and 阳刃 tables and do not move with the
+fork — only 长生 does.
 
 Absent entirely when the birth hour is unknown.
 

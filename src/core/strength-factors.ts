@@ -69,15 +69,41 @@ const BRANCH_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '�
 const STAGES = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
 const YANG_ANCHOR: Record<string, string> = { 甲: '亥', 丙: '寅', 戊: '寅', 庚: '巳', 壬: '申' };
 const YIN_ANCHOR: Record<string, string> = { 乙: '午', 丁: '酉', 己: '酉', 辛: '子', 癸: '卯' };
+/** Under 阴阳同生同死 a yin stem runs the cycle forward from its yang partner's anchor. */
+const YIN_PARTNER: Record<string, string> = { 乙: '甲', 丁: '丙', 己: '戊', 辛: '庚', 癸: '壬' };
 
-function stageOf(dayStem: string, branch: string): string {
+/**
+ * 《渊海子平》(the default) and 《滴天髓》任铁樵注 disagree about yin stems and
+ * only about yin stems, so this changes half of all charts and none of the
+ * other half. It is a table fork, not a judgment: given the school, both
+ * branches here are pure lookups.
+ */
+export type TwelveStageSchool = 'yang_forward_yin_backward' | 'yin_follows_yang';
+
+function stageOf(dayStem: string, branch: string, school: TwelveStageSchool): string {
   const isYang = STEM_TO_POLARITY[dayStem] === 'yang';
-  const anchor = isYang ? YANG_ANCHOR[dayStem] : YIN_ANCHOR[dayStem];
+  const runsBackward = !isYang && school === 'yang_forward_yin_backward';
+  const anchor = isYang
+    ? YANG_ANCHOR[dayStem]
+    : school === 'yang_forward_yin_backward'
+      ? YIN_ANCHOR[dayStem]
+      : YANG_ANCHOR[YIN_PARTNER[dayStem]];
   const bi = BRANCH_ORDER.indexOf(branch);
   const ai = BRANCH_ORDER.indexOf(anchor);
-  const idx = isYang ? (bi - ai + 12) % 12 : (ai - bi + 12) % 12;
+  const idx = runsBackward ? (ai - bi + 12) % 12 : (bi - ai + 12) % 12;
   return STAGES[idx];
 }
+
+/**
+ * 十干禄 and 阳刃, as their own tables rather than as the 临官/帝旺 positions.
+ * They coincide with those positions under 阳顺阴逆 -- that identity is what
+ * `verifyTwelveStageAnchors` checks -- but the identity is a property of that
+ * school, not a definition. Under 同生同死 辛's 临官 moves to 申 while 辛禄 is
+ * 酉 either way, so deriving 禄 from the stage would have moved a
+ * school-independent fact along with a school-dependent one.
+ */
+const LU: Record<string, string> = { 甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳', 己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子' };
+const YANG_BLADE: Record<string, string> = { 甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子' };
 
 // Self-check (run once, e.g. from a scratch script -- not part of the test
 // count): every stem's 临官 branch must equal its 十干禄 branch, and every
@@ -85,13 +111,13 @@ function stageOf(dayStem: string, branch: string): string {
 //   临官: 甲寅 乙卯 丙巳 丁午 戊巳 己午 庚申 辛酉 壬亥 癸子
 //   帝旺 (yang only): 甲卯 丙午 戊午 庚酉 壬子
 export function verifyTwelveStageAnchors(): boolean {
-  const lu: Record<string, string> = { 甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳', 己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子' };
-  const ren: Record<string, string> = { 甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子' };
-  for (const stem of Object.keys(lu)) {
-    if (stageOf(stem, lu[stem]) !== '临官') return false;
+  // Only under 阳顺阴逆. Asserting it for 同生同死 would be asserting that
+  // school is wrong -- there 辛's 临官 is 申 while 辛禄 stays 酉.
+  for (const stem of Object.keys(LU)) {
+    if (stageOf(stem, LU[stem], 'yang_forward_yin_backward') !== '临官') return false;
   }
-  for (const stem of Object.keys(ren)) {
-    if (stageOf(stem, ren[stem]) !== '帝旺') return false;
+  for (const stem of Object.keys(YANG_BLADE)) {
+    if (stageOf(stem, YANG_BLADE[stem], 'yang_forward_yin_backward') !== '帝旺') return false;
   }
   return true;
 }
@@ -122,12 +148,13 @@ const STOREHOUSE_ELEMENT: Record<string, string> = {
  * value: nothing stops one branch from qualifying twice, and an
  * order-dependent first-match-wins would decide which fact to hide.
  */
-function labelsFor(dayStem: string, branch: string): RootLabel[] {
+function labelsFor(dayStem: string, branch: string, school: TwelveStageSchool): RootLabel[] {
   const labels: RootLabel[] = [];
-  const stage = stageOf(dayStem, branch);
-  if (stage === '临官') labels.push('禄');
-  if (stage === '帝旺' && STEM_TO_POLARITY[dayStem] === 'yang') labels.push('刃');
-  if (stage === '长生') labels.push('长生');
+  if (LU[dayStem] === branch) labels.push('禄');
+  if (YANG_BLADE[dayStem] === branch) labels.push('刃');
+  // 长生 is the one of the three that genuinely moves with the school -- the
+  // position of 长生 IS what the two schools disagree about.
+  if (stageOf(dayStem, branch, school) === '长生') labels.push('长生');
   if (STOREHOUSE_ELEMENT[branch] === STEM_TO_ELEMENT[dayStem]) labels.push('墓库根');
   return labels;
 }
@@ -181,17 +208,41 @@ export interface ConventionChoice {
   source: string;
   /** Named schools this does NOT follow. */
   alternatives: string[];
-  /** Fields whose value changes if the caller assumes an alternative. */
+  /** Fields whose value changes if the caller assumes an alternative.
+   * Machine-resolvable paths into this object -- a test walks every one. */
   affects: string[];
+  /** Narrows `affects` where only part of a listed field moves. */
+  note?: string;
 }
 
-export const STRENGTH_FACTOR_CONVENTIONS: Record<string, ConventionChoice> = {
-  twelveStage: {
+const TWELVE_STAGE_SCHOOLS: Record<TwelveStageSchool, { used: string; source: string; other: string }> = {
+  yang_forward_yin_backward: {
     used: '阳干顺行、阴干逆行',
     source: '渊海子平·论天干生旺死绝',
-    alternatives: ['阴阳同生同死（滴天髓·任铁樵注，阴干随其阳干顺行）'],
-    affects: ['monthOrder.twelveStage', 'roots[].tags'],
+    other: '阴阳同生同死（滴天髓·任铁樵注，阴干随其阳干顺行）— 传 twelveStageSchool: "yin_follows_yang"',
   },
+  yin_follows_yang: {
+    used: '阴阳同生同死，阴干随其阳干顺行',
+    source: '滴天髓·任铁樵注',
+    other: '阳干顺行、阴干逆行（渊海子平）— 传 twelveStageSchool: "yang_forward_yin_backward"',
+  },
+};
+
+export function strengthFactorConventions(school: TwelveStageSchool): Record<string, ConventionChoice> {
+  const twelveStage = TWELVE_STAGE_SCHOOLS[school];
+  return {
+    twelveStage: {
+      used: twelveStage.used,
+      source: twelveStage.source,
+      alternatives: [twelveStage.other],
+      affects: ['monthOrder.twelveStage', 'roots[].tags'],
+      note: '仅 roots[].tags 中的「长生」随本岔路变动；「禄」「刃」分别取自十干禄表与阳刃表，与流派无关。',
+    },
+    ...REST_OF_CONVENTIONS,
+  };
+}
+
+const REST_OF_CONVENTIONS: Record<string, ConventionChoice> = {
   wangXiangXiuQiuSi: {
     used: '以月支本气为令',
     source: '五行旺相休囚死通行口径',
@@ -215,7 +266,10 @@ export interface StrengthFactors {
   tableNote: string;
 }
 
-export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFactors {
+export function computeStrengthFactors(
+  pillars: FourPillarsGanZhi,
+  school: TwelveStageSchool = 'yang_forward_yin_backward',
+): StrengthFactors {
   const dayStem = pillars.day[0];
   const dme = STEM_TO_ELEMENT[dayStem];
 
@@ -229,7 +283,7 @@ export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFact
     tenGod: calculateTenGod(dayStem, mainQiStem),
     relation: relationOf(dme, mainQiElement),
     wangXiangXiuQiuSi: wangXiangXiuQiuSiOf(dme, mainQiElement),
-    twelveStage: stageOf(dayStem, monthBranch),
+    twelveStage: stageOf(dayStem, monthBranch, school),
   };
 
   const pillarBranches: Array<[PillarName, string]> = [
@@ -246,7 +300,7 @@ export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFact
         break;
       }
     }
-    return { pillar, branch, rootLevel, rootStem, tags: labelsFor(dayStem, branch) };
+    return { pillar, branch, rootLevel, rootStem, tags: labelsFor(dayStem, branch, school) };
   });
 
   const stemPositions: Array<['year' | 'month' | 'hour', string]> = [
@@ -268,7 +322,7 @@ export function computeStrengthFactors(pillars: FourPillarsGanZhi): StrengthFact
     monthOrder,
     roots,
     stemSupport,
-    conventions: STRENGTH_FACTOR_CONVENTIONS,
+    conventions: strengthFactorConventions(school),
     tableNote:
       'Hidden-stem proportions follow @openfate/bazi-engine\'s BRANCH_HIDDEN_STEMS table ' +
       '(mainstream 本气/中气/余气 apportionment, Si 巳 reordered to 丙庚戊 -- see hidden-stems.ts); ' +

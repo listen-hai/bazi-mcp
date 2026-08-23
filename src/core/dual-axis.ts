@@ -557,7 +557,7 @@ function computeAxes(input: BaziInput, timeOverride?: { hour: number; minute: nu
       day: dayPillar.ganZhi,
       hour: hourPillar.ganZhi,
     };
-    strengthFactors = computeStrengthFactors(fourGanZhi);
+    strengthFactors = computeStrengthFactors(fourGanZhi, input.twelveStageSchool);
   }
 
   // 9. Format Da Yun (strictly from Axis A) with nominal age

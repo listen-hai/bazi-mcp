@@ -230,3 +230,51 @@ describe('school forks are declared, not silently applied', () => {
     }
   });
 });
+
+describe('twelveStageSchool selects a table, and only what the table decides', () => {
+  const chart = { year: '癸酉', month: '丁巳', day: '辛丑', hour: '癸巳' };
+  const under = (school: string) =>
+    computeStrengthFactors(chart as never, school as never) as never as {
+      monthOrder: { twelveStage: string };
+      roots: { branch: string; tags: string[] }[];
+      conventions: Record<string, { used: string }>;
+    };
+
+  it('moves the stage for a yin day master', () => {
+    // 辛 in 巳: 死 under 渊海子平's 阴干逆行, 长生 under 滴天髓's 同生同死.
+    // Opposite ends of the cycle from one fork -- which is why the fork is an
+    // input rather than something this file decides.
+    expect(under('yang_forward_yin_backward').monthOrder.twelveStage).toBe('死');
+    expect(under('yin_follows_yang').monthOrder.twelveStage).toBe('长生');
+  });
+
+  it('leaves 禄 where 十干禄 puts it, whichever school is chosen', () => {
+    // The regression this guards: 禄 used to be derived from the 临官 stage.
+    // That identity holds under 阳顺阴逆 only. Under 同生同死 辛's 临官 moves
+    // to 申 while 辛禄 is 酉 in both schools, so the derivation would have
+    // dragged a school-independent fact along with a school-dependent one.
+    for (const school of ['yang_forward_yin_backward', 'yin_follows_yang']) {
+      const you = under(school).roots.find(r => r.branch === '酉');
+      expect(you?.tags, `辛禄 must stay on 酉 under ${school}`).toContain('禄');
+    }
+  });
+
+  it('changes nothing at all for a yang day master', () => {
+    // The two schools differ about yin stems and only about yin stems. If a
+    // yang chart ever moved, the fork would be reaching past what it decides.
+    for (const stem of '甲丙戊庚壬') {
+      for (const branch of '子丑寅卯辰巳午未申酉戌亥') {
+        const pillars = { year: '甲子', month: stem + branch, day: stem + branch, hour: '甲子' };
+        const a = computeStrengthFactors(pillars as never, 'yang_forward_yin_backward' as never);
+        const b = computeStrengthFactors(pillars as never, 'yin_follows_yang' as never);
+        expect(b.monthOrder, `${stem}${branch}`).toEqual(a.monthOrder);
+        expect(b.roots, `${stem}${branch}`).toEqual(a.roots);
+      }
+    }
+  });
+
+  it('echoes back the school actually used, not always the default', () => {
+    expect(under('yang_forward_yin_backward').conventions.twelveStage.used).toContain('阴干逆行');
+    expect(under('yin_follows_yang').conventions.twelveStage.used).toContain('同生同死');
+  });
+});

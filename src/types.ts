@@ -187,6 +187,7 @@ export interface ConventionChoiceOutput {
   source: string;
   alternatives: string[];
   affects: string[];
+  note?: string;
 }
 
 export interface StrengthFactorsOutput {
