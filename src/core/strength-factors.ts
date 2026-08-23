@@ -10,9 +10,10 @@ export interface FourPillarsGanZhi {
 
 /**
  * Zero-weight, deterministic strength FACTS -- no weight, no threshold, no
- * verdict word appears anywhere in this file. `strength.ts` turns these same
- * relationships into a scored, weighted verdict; this module only reports
- * what is true of the chart so a caller can weigh it however they like.
+ * verdict word appears anywhere in this file. `strength.ts` used to turn these
+ * same relationships into a scored, weighted verdict; 4.0.0 deleted it,
+ * because the classics supply the rules and the weights were ours. This module
+ * only reports what is true of the chart so a caller can weigh it themselves.
  *
  * In particular this never reports 得令/失令 -- that is itself a judgment
  * (whether the month's season *favours* the Day Master), not a fact. What IS
@@ -105,9 +106,10 @@ function stageOf(dayStem: string, branch: string, school: TwelveStageSchool): st
 const LU: Record<string, string> = { 甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳', 己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子' };
 const YANG_BLADE: Record<string, string> = { 甲: '卯', 丙: '午', 戊: '午', 庚: '酉', 壬: '子' };
 
-// Self-check (run once, e.g. from a scratch script -- not part of the test
-// count): every stem's 临官 branch must equal its 十干禄 branch, and every
-// yang stem's 帝旺 branch must equal its 刃 branch.
+// Cross-checks the 长生 anchors against the independently-entered LU and
+// YANG_BLADE tables: every stem's 临官 branch must equal its 十干禄 branch, and
+// every yang stem's 帝旺 branch its 刃 branch. A typo in either table, or in
+// the index arithmetic, fails it. Called from tests/strength.test.ts.
 //   临官: 甲寅 乙卯 丙巳 丁午 戊巳 己午 庚申 辛酉 壬亥 癸子
 //   帝旺 (yang only): 甲卯 丙午 戊午 庚酉 壬子
 export function verifyTwelveStageAnchors(): boolean {
@@ -261,7 +263,7 @@ export interface StrengthFactors {
   monthOrder: MonthOrderFact;
   roots: RootFact[];
   stemSupport: StemSupportFact[];
-  /** Which school each table above follows -- see STRENGTH_FACTOR_CONVENTIONS. */
+  /** Which school each table above follows -- see strengthFactorConventions(). */
   conventions: Record<string, ConventionChoice>;
   tableNote: string;
 }

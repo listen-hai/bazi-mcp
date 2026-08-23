@@ -278,3 +278,41 @@ describe('twelveStageSchool selects a table, and only what the table decides', (
     expect(under('yin_follows_yang').conventions.twelveStage.used).toContain('同生同死');
   });
 });
+
+describe('the school fork moves only what it decides, on the side it decides it', () => {
+  // The yang case is covered above: nothing moves at all. The yin case is the
+  // one the fork exists for, and it is the one where reaching too far would
+  // hide -- 旺相休囚死, rootLevel, 禄/刃/墓库根 and stem support are all decided
+  // by tables the fork has no business touching.
+  it('changes 长生 and the stage, and nothing else, for a yin day master', () => {
+    for (const stem of '乙丁己辛癸') {
+      for (const branch of '子丑寅卯辰巳午未申酉戌亥') {
+        const pillars = { year: stem + branch, month: stem + branch, day: stem + branch, hour: stem + branch };
+        const a = computeStrengthFactors(pillars as never, 'yang_forward_yin_backward' as never) as never as Record<string, never>;
+        const b = computeStrengthFactors(pillars as never, 'yin_follows_yang' as never) as never as Record<string, never>;
+        const where = `${stem}${branch}`;
+
+        const strip = (m: Record<string, unknown>) => ({ ...m, twelveStage: undefined });
+        expect(strip(a.monthOrder), where).toEqual(strip(b.monthOrder));
+        expect(b.stemSupport, where).toEqual(a.stemSupport);
+
+        const roots = (f: Record<string, never>) =>
+          (f.roots as { tags: string[] }[]).map(r => ({ ...r, tags: r.tags.filter(t => t !== '长生') }));
+        expect(roots(b), where).toEqual(roots(a));
+      }
+    }
+  });
+
+  it('and the 长生 tag really does move, or the test above proves nothing', () => {
+    // 辛's 长生 is 子 under 阳顺阴逆 and 巳 under 同生同死. If the filter above
+    // were masking a fork that no longer works, this fails.
+    const tagsOn = (branch: string, school: string) =>
+      (computeStrengthFactors(
+        { year: '辛' + branch, month: '辛' + branch, day: '辛' + branch, hour: '辛' + branch } as never,
+        school as never,
+      ) as never as { roots: { tags: string[] }[] }).roots[0].tags;
+    expect(tagsOn('子', 'yang_forward_yin_backward')).toContain('长生');
+    expect(tagsOn('子', 'yin_follows_yang')).not.toContain('长生');
+    expect(tagsOn('巳', 'yin_follows_yang')).toContain('长生');
+  });
+});

@@ -166,11 +166,14 @@ export interface RootFactOutput {
    * for yin stems, which run the cycle backward.
    */
   /**
-   * NOTE on 长生: it is a stage fact, not evidence of a root. Every yin stem's
-   * 长生 branch (乙午 丁酉 己酉 辛子 癸卯) hides no stem of the same element, so
-   * this tag can appear alongside `rootLevel: '无'`. Whether 阴长生 counts as
-   * a root is a live dispute; this server reports the position and takes no
-   * side.
+   * NOTE on 长生: it is a stage fact, not evidence of a root, and whether the
+   * two coincide depends on `twelveStageSchool`. Under the default 阳顺阴逆,
+   * every yin stem's 长生 branch (乙午 丁酉 己酉 辛子 癸卯) hides no stem of the
+   * same element, so the tag routinely appears alongside `rootLevel: '无'`.
+   * Under 同生同死 a yin stem takes its yang partner's branch (乙亥 丁寅 己寅
+   * 辛巳 癸申) and all five DO hide one, so the tag and a non-'无' rootLevel
+   * coincide instead. Whether 阴长生 counts as a root is a live dispute either
+   * way; this server reports the position and takes no side.
    */
   tags: ('禄' | '刃' | '长生' | '墓库根')[];
 }
