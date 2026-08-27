@@ -53,6 +53,22 @@ export function createBaziMcpServer(): Server {
   const tools: Tool[] = [
     {
       name: 'calculate_bazi',
+      // Every tool here reads bundled tables and computes: nothing is written,
+      // nothing is fetched. All four hints are stated even though the spec
+      // calls destructiveHint/idempotentHint meaningful only when readOnlyHint
+      // is false -- "ignorable" is not "wrong", every value here is known to be
+      // true of a pure calculation, and at least one directory is reported to
+      // reject tools that leave any of the four unset. openWorldHint is the one
+      // that would actually mislead if omitted: it DEFAULTS TO TRUE, so silence
+      // tells a client these tools reach an open world when their whole domain
+      // is a bundled table.
+      annotations: {
+        title: 'Bazi (Four Pillars) chart',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
       description:
         'Precise Bazi (Four Pillars of Destiny) chart calculation tool. Uses a dual-axis architecture (UTC instant for Year/Month pillars and Da Yun, local True Solar Time for Day/Hour pillars). Supports any birth location worldwide with full historical DST handling. IMPORTANT: The `place` field requires an ENGLISH city name. If the user provides a city name in Chinese or any other language, translate it to English before calling this tool (e.g. 北京 → "Beijing", 乌鲁木齐 → "Urumqi", 東京 → "Tokyo", 뉴욕 → "New York"). Pass exactly ONE of `solarDate`/`lunarDate` and ONE of `clockTime`/`shichen`/`timeUnknown` — conflicting combinations are rejected rather than silently resolved. Chinese mainland places default to Beijing civil time (UTC+8); for Xinjiang the geographic zone is reported separately and can be selected by passing `timezone` explicitly. `solarTime` selects the solar time correction mode: "true" (default, longitude correction + equation of time), "mean" (longitude correction only, 地方平太阳时), or "off" (neither); the older `trueSolar` boolean is a deprecated alias. PRESENTING UNCERTAINTY: with `timeUnknown: true`, a pillar whose 干支 reads "A/B" is genuinely undetermined -- report BOTH to the user, never one. `diagnostics.pillarCandidates` holds the pair, `diagnostics.dayPillarAlternative` names the value the 早子時 hour (23:00-24:00) would give instead, and `daYun.startDate` is a date RANGE, not a date. Read `diagnostics.warnings` and pass their substance on. Collapsing any of these into a single confident value reintroduces exactly the fabrication this server refuses to make. STRENGTH (旺衰): this server does NOT judge 身强/身弱, 喜用神 or 格局 -- those are inference, and no source supplies the weights they need, so a scored verdict would rest on numbers invented here. What you get instead is `strengthFactors`: a zero-weight ledger of table lookups -- 月令 relation and 旺相休囚死, per-branch roots with qi level and 禄/刃/长生/墓库根 tags and stem-support direction. Weigh them yourself, ideally against a 命理 knowledge base; do not present the ledger\'s facts as a verdict, and do not present your own weighing as if this tool produced it. Three of those tables sit on a live school dispute and each is a named input -- `twelveStageSchool`, `monthOrderSchool`, `bladeSchool` (see their own descriptions). `strengthFactors.conventions` echoes back the school in force, the ones not used, and the fields that would change under them. Defaults are the mainstream reading in every case, so pass one only when the user follows a specific school; do not choose for them. For a yin day master the 十二长生 fork changes every branch, and 阴刃 has three irreconcilable readings of which this server reports none by default -- so check `conventions` before repeating a 长生位 or a 禄/刃 tag as settled.',
       inputSchema: {
@@ -167,6 +183,13 @@ export function createBaziMcpServer(): Server {
     },
     {
       name: 'lookup_location',
+      annotations: {
+        title: 'Resolve a birthplace',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
       description: 'Look up a city\'s coordinates and IANA timezone. Use this BEFORE a chart tool whenever the place name might be ambiguous -- it is cheaper than a refused chart call. IMPORTANT: English city names only; translate first (东京 -> "Tokyo"). When more than one city comes back, ASK the user which one they mean -- do not pick the first, the largest, or the most likely. The response reports `matched` (true hit count) and `shown` (after the cap), so a capped list never reads as an exhaustive one. Covers 7,329 cities across 227 countries.',
       inputSchema: {
         type: 'object',
